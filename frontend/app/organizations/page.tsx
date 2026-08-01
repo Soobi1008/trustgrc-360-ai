@@ -37,7 +37,7 @@ const [newOrganization, setNewOrganization] = useState({
         setErrorMessage("");
 
         const response = await fetch(
-          "http://127.0.0.1:8000/api/v1/organizations"
+          "http://195.216.168.137:8000/api/v1/organizations"
         );
 
         if (!response.ok) {
@@ -66,7 +66,7 @@ const [newOrganization, setNewOrganization] = useState({
 async function handleSaveOrganization() {
   try {
     const response = await fetch(
-      "http://127.0.0.1:8000/api/v1/organizations",
+      "http://195.216.168.137:8000/api/v1/organizations",
       {
         method: "POST",
         headers: {

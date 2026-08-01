@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 type AISystem = {
   id: number;
@@ -29,6 +29,7 @@ type GeneratedRisk = {
 };
 
 export default function GeneratedRisksPage() {
+  const [isMounted, setIsMounted] = useState(false);
   const [aiSystems, setAiSystems] = useState<AISystem[]>([]);
   const [selectedSystemId, setSelectedSystemId] = useState("");
   const [risks, setRisks] = useState<GeneratedRisk[]>([]);
@@ -39,37 +40,81 @@ export default function GeneratedRisksPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    loadAISystems();
+    setIsMounted(true);
   }, []);
 
   useEffect(() => {
+    if (!isMounted) {
+      return;
+    }
+
+    loadAISystems();
+  }, [isMounted]);
+
+  useEffect(() => {
+    if (!isMounted) {
+      return;
+    }
+
     if (selectedSystemId) {
       loadGeneratedRisks(selectedSystemId);
     } else {
       setRisks([]);
     }
-  }, [selectedSystemId]);
+  }, [isMounted, selectedSystemId]);
+
+  function checkApiConfiguration() {
+    if (!API_BASE_URL) {
+      throw new Error(
+        "NEXT_PUBLIC_API_URL is missing. Check the .env.local file and restart Next.js."
+      );
+    }
+  }
 
   async function loadAISystems() {
     setLoadingSystems(true);
     setError("");
 
     try {
+      checkApiConfiguration();
+
       const response = await fetch(
-        `${API_BASE_URL}/api/v1/ai-systems`
+        `${API_BASE_URL}/api/v1/ai-systems`,
+        {
+          headers: {
+            Accept: "application/json",
+          },
+        }
       );
 
       if (!response.ok) {
-        throw new Error("Unable to load AI systems.");
+        throw new Error(
+          `Unable to load AI systems. Server returned ${response.status}.`
+        );
       }
 
       const data: AISystem[] = await response.json();
+
       setAiSystems(data);
 
       if (data.length > 0) {
-        setSelectedSystemId(String(data[0].id));
+        setSelectedSystemId((currentId) => {
+          if (
+            currentId &&
+            data.some((system) => String(system.id) === currentId)
+          ) {
+            return currentId;
+          }
+
+          return String(data[0].id);
+        });
+      } else {
+        setSelectedSystemId("");
+        setRisks([]);
       }
     } catch (err) {
+      console.error("Error loading AI systems:", err);
+
       setError(
         err instanceof Error
           ? err.message
@@ -85,17 +130,28 @@ export default function GeneratedRisksPage() {
     setError("");
 
     try {
+      checkApiConfiguration();
+
       const response = await fetch(
-        `${API_BASE_URL}/api/v1/ai-systems/${aiSystemId}/generated-risks`
+        `${API_BASE_URL}/api/v1/ai-systems/${aiSystemId}/generated-risks`,
+        {
+          headers: {
+            Accept: "application/json",
+          },
+        }
       );
 
       if (!response.ok) {
-        throw new Error("Unable to load generated risks.");
+        throw new Error(
+          `Unable to load generated risks. Server returned ${response.status}.`
+        );
       }
 
       const data: GeneratedRisk[] = await response.json();
       setRisks(data);
     } catch (err) {
+      console.error("Error loading generated risks:", err);
+
       setError(
         err instanceof Error
           ? err.message
@@ -117,6 +173,13 @@ export default function GeneratedRisksPage() {
     setError("");
 
     try {
+      checkApiConfiguration();
+
+      console.log(
+        "Generating risks for AI system:",
+        selectedSystemId
+      );
+
       const response = await fetch(
         `${API_BASE_URL}/api/v1/ai-systems/${selectedSystemId}/generate-risks`,
         {
@@ -129,19 +192,25 @@ export default function GeneratedRisksPage() {
 
       if (!response.ok) {
         const details = await response.text();
+
         throw new Error(
-          details || "Unable to generate risks."
+          details ||
+            `Unable to generate risks. Server returned ${response.status}.`
         );
       }
 
       const data: GeneratedRisk[] = await response.json();
+
       setRisks(data);
+
       setMessage(
         `${data.length} risk recommendation${
           data.length === 1 ? "" : "s"
         } generated successfully.`
       );
     } catch (err) {
+      console.error("Error generating risks:", err);
+
       setError(
         err instanceof Error
           ? err.message
@@ -160,6 +229,8 @@ export default function GeneratedRisksPage() {
     setMessage("");
 
     try {
+      checkApiConfiguration();
+
       const response = await fetch(
         `${API_BASE_URL}/api/v1/generated-risks/${riskId}/review`,
         {
@@ -176,8 +247,10 @@ export default function GeneratedRisksPage() {
 
       if (!response.ok) {
         const details = await response.text();
+
         throw new Error(
-          details || "Unable to update the risk."
+          details ||
+            `Unable to update the risk. Server returned ${response.status}.`
         );
       }
 
@@ -194,6 +267,8 @@ export default function GeneratedRisksPage() {
         `${updatedRisk.title} marked as ${reviewStatus}.`
       );
     } catch (err) {
+      console.error("Error reviewing risk:", err);
+
       setError(
         err instanceof Error
           ? err.message
@@ -206,10 +281,13 @@ export default function GeneratedRisksPage() {
     switch (status) {
       case "Approved":
         return "bg-green-100 text-green-800";
+
       case "Rejected":
         return "bg-red-100 text-red-800";
+
       case "Needs Information":
         return "bg-blue-100 text-blue-800";
+
       default:
         return "bg-amber-100 text-amber-800";
     }
@@ -232,7 +310,21 @@ export default function GeneratedRisksPage() {
       return "bg-orange-100 text-orange-800";
     }
 
+    if (category.includes("Security")) {
+      return "bg-red-100 text-red-800";
+    }
+
     return "bg-slate-100 text-slate-800";
+  }
+
+  if (!isMounted) {
+    return (
+      <div className="p-6">
+        <div className="rounded-xl border bg-white p-8 text-gray-500 shadow-sm">
+          Loading TrustGRC AI 360 Intelligence Layer...
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -261,14 +353,18 @@ export default function GeneratedRisksPage() {
             <select
               id="ai-system"
               value={selectedSystemId}
-              onChange={(event) =>
-                setSelectedSystemId(event.target.value)
-              }
+              onChange={(event) => {
+                setSelectedSystemId(event.target.value);
+                setMessage("");
+                setError("");
+              }}
               disabled={loadingSystems}
               className="w-full rounded-lg border border-gray-300 px-3 py-2"
             >
               {loadingSystems && (
-                <option>Loading AI systems...</option>
+                <option value="">
+                  Loading AI systems...
+                </option>
               )}
 
               {!loadingSystems &&
@@ -383,25 +479,38 @@ export default function GeneratedRisksPage() {
             <table className="min-w-full divide-y divide-gray-200 text-sm">
               <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-600">
                 <tr>
-                  <th className="px-4 py-3">Risk</th>
+                  <th className="px-4 py-3">
+                    Risk
+                  </th>
+
                   <th className="px-4 py-3">
                     Category
                   </th>
+
+                  <th className="px-4 py-3">
+                    Score
+                  </th>
+
                   <th className="px-4 py-3">
                     Likelihood
                   </th>
+
                   <th className="px-4 py-3">
                     Impact
                   </th>
+
                   <th className="px-4 py-3">
                     Regulation
                   </th>
+
                   <th className="px-4 py-3">
                     Recommended Control
                   </th>
+
                   <th className="px-4 py-3">
                     Status
                   </th>
+
                   <th className="px-4 py-3">
                     Actions
                   </th>
@@ -441,6 +550,10 @@ export default function GeneratedRisksPage() {
                       </span>
                     </td>
 
+                    <td className="px-4 py-4 font-semibold">
+                      {risk.risk_score}
+                    </td>
+
                     <td className="px-4 py-4">
                       {risk.likelihood}
                     </td>
@@ -477,7 +590,11 @@ export default function GeneratedRisksPage() {
                               "Approved"
                             )
                           }
-                          className="rounded-md border border-green-300 px-3 py-1.5 text-xs font-semibold text-green-700 hover:bg-green-50"
+                          disabled={
+                            risk.review_status ===
+                            "Approved"
+                          }
+                          className="rounded-md border border-green-300 px-3 py-1.5 text-xs font-semibold text-green-700 hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           Approve
                         </button>
@@ -490,7 +607,11 @@ export default function GeneratedRisksPage() {
                               "Rejected"
                             )
                           }
-                          className="rounded-md border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50"
+                          disabled={
+                            risk.review_status ===
+                            "Rejected"
+                          }
+                          className="rounded-md border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           Reject
                         </button>
@@ -503,7 +624,11 @@ export default function GeneratedRisksPage() {
                               "Needs Information"
                             )
                           }
-                          className="rounded-md border border-blue-300 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50"
+                          disabled={
+                            risk.review_status ===
+                            "Needs Information"
+                          }
+                          className="rounded-md border border-blue-300 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           Need Info
                         </button>

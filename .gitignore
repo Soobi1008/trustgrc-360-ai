@@ -1,8 +1,16 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# =====================================================
+# Node.js / Next.js
+# =====================================================
 
-# dependencies
-/node_modules
-/.pnp
+# Dependencies
+**/node_modules/
+
+# Next.js build output
+**/.next/
+**/out/
+
+# Package manager files
+.pnp
 .pnp.*
 .yarn/*
 !.yarn/patches
@@ -10,47 +18,81 @@
 !.yarn/releases
 !.yarn/versions
 
-# testing
-/coverage
+# Coverage
+coverage/
 
-# next.js
-/.next/
-/out/
+# Production builds
+build/
 
-# production
-/build
+# =====================================================
+# Environment Variables
+# =====================================================
 
-# misc
-.DS_Store
-*.pem
+.env*
+**/.env*
 
-# debug
+# =====================================================
+# Logs
+# =====================================================
+
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# =====================================================
+# Vercel
+# =====================================================
 
-# vercel
-.vercel
+.vercel/
 
-# typescript
+# =====================================================
+# TypeScript
+# =====================================================
+
 *.tsbuildinfo
 next-env.d.ts
 
+# =====================================================
 # Python
+# =====================================================
+
 **/__pycache__/
 *.pyc
 *.pyo
 
-# Python virtual env
+# Virtual environments
 backend/.venv/
+.venv/
 
-# Local databases
+# =====================================================
+# Databases
+# =====================================================
+
 *.db
 *.sqlite3
 
-# VS Code
+#======================================================
+# Local credentials and private notes
+GitHub.txt
+*token*.txt
+#======================================================
+
+# =====================================================
+# IDE / Editor
+# =====================================================
+
 .vscode/
+
+# =====================================================
+# OS Files
+# =====================================================
+
+.DS_Store
+Thumbs.db
+
+# =====================================================
+# Security / Certificates
+# =====================================================
+
+*.pem

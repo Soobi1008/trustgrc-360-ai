@@ -1,0 +1,21 @@
+URL:
+
+http://195.216.168.137:8000/
+http://195.216.168.137:8000/health
+http://195.216.168.137:8000/docs
+http://localhost:3000/inventory
+http://localhost:3000/organisations
+
+----------------------------------------------------
+POWERSHELL
+
+Backend:
+
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
+.venv\Scripts\activate
+uvicorn app.main:app --reload
+npm run dev
+
+Frontend:
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
+npm run dev

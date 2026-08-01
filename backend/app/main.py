@@ -6,6 +6,10 @@ from app.api.intelligence import router as intelligence_router
 from app.api.organizations import router as organizations_router
 from app.db.base import Base
 from app.db.session import engine
+from app.api.auth import router as auth_router
+from app.api.admin_users import (
+    router as admin_users_router,
+)
 
 import app.models  # Registers all SQLAlchemy models
 
@@ -33,6 +37,8 @@ app.add_middleware(
 app.include_router(organizations_router)
 app.include_router(ai_systems_router)
 app.include_router(intelligence_router)
+app.include_router(auth_router)
+app.include_router(admin_users_router)
 
 
 @app.get("/")

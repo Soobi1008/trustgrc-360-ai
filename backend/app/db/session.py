@@ -1,5 +1,5 @@
-import os
 from collections.abc import Generator
+import os
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
@@ -9,16 +9,11 @@ DATABASE_URL = os.getenv(
     "sqlite:///./trustgrc.db",
 )
 
-engine_options = {
-    "pool_pre_ping": True,
-}
-
-if DATABASE_URL.startswith("sqlite"):
-    engine_options["connect_args"] = {"check_same_thread": False}
-
 engine = create_engine(
     DATABASE_URL,
-    **engine_options,
+    connect_args={"check_same_thread": False}
+    if DATABASE_URL.startswith("sqlite")
+    else {},
 )
 
 SessionLocal = sessionmaker(
