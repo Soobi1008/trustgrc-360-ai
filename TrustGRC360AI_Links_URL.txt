@@ -9,13 +9,57 @@ http://localhost:3000/organisations
 ----------------------------------------------------
 POWERSHELL
 
-Backend:
+ROOT:
+
+cd C:\Users\sb108\Documents\trustgrc-360-ai-local
+
+Useful commands:
+
+git status
+git pull
+git add -A
+git commit -m "message"
+git push origin main
+
+
+
+FRONTEND
+
+cd C:\Users\sb108\Documents\trustgrc-360-ai-local\frontend
 
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
-.venv\Scripts\activate
-uvicorn app.main:app --reload
 npm run dev
 
-Frontend:
+Local: http://localhost:3000
+
+Test:
+
+http://localhost:3000
+http://localhost:3000/login
+
+
+BACKEND
+
+cd C:\Users\sb108\Documents\trustgrc-360-ai-local\backend
+
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
-npm run dev
+.\.venv\Scripts\Activate.ps1
+python -m uvicorn app.main:app --reload
+
+OR 
+.\.venv\Scripts\Activate.ps1
+python -m uvicorn app.main:app --reload
+
+
+INFO: Uvicorn running on http://127.0.0.1:8000
+
+Test
+http://127.0.0.1:8000
+http://127.0.0.1:8000/health
+http://127.0.0.1:8000/docs
+
+
+---------------------------------------------------------------------------------
+
+
+
