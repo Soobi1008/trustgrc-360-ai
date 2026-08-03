@@ -57,9 +57,19 @@ Test
 http://127.0.0.1:8000
 http://127.0.0.1:8000/health
 http://127.0.0.1:8000/docs
+http://127.0.0.1:8000/api/v1/organizations/
 
 
 ---------------------------------------------------------------------------------
+
+1 admin@trustgrc360.com super_admin True 2 companyadmin@demoai.com organization_admin True
+
+Your Super Admin account is:
+
+Email: admin@trustgrc360.com
+Password: ChangeMe123!
+Role: super_admin
+Status: Active
 
 
 

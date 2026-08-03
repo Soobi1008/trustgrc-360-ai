@@ -27,14 +27,17 @@ UserRole = PlatformRole | CompanyRole
 
 class UserCreate(BaseModel):
     email: EmailStr
+
     full_name: str = Field(
         min_length=2,
         max_length=255,
     )
+
     password: str = Field(
         min_length=10,
         max_length=128,
     )
+
     role: UserRole
     organization_id: int | None = None
     is_active: bool = True
@@ -65,6 +68,30 @@ class UserCreate(BaseModel):
             )
 
         return self
+
+
+class UserUpdate(BaseModel):
+    email: EmailStr | None = None
+
+    full_name: str | None = Field(
+        default=None,
+        min_length=2,
+        max_length=255,
+    )
+
+    password: str | None = Field(
+        default=None,
+        min_length=10,
+        max_length=128,
+    )
+
+    role: UserRole | None = None
+    organization_id: int | None = None
+    is_active: bool | None = None
+
+
+class UserStatusUpdate(BaseModel):
+    is_active: bool
 
 
 class UserResponse(BaseModel):
