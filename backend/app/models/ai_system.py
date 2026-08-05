@@ -1,9 +1,21 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import (
+    JSON,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
+from sqlalchemy.orm import (
+    Mapped,
+    mapped_column,
+    relationship,
+)
 
 from app.db.base import Base
+
 
 class AISystem(Base):
     __tablename__ = "ai_systems"
@@ -15,7 +27,10 @@ class AISystem(Base):
     )
 
     organization_id: Mapped[int] = mapped_column(
-        ForeignKey("organizations.id"),
+        ForeignKey(
+            "organizations.id",
+            ondelete="CASCADE",
+        ),
         nullable=False,
         index=True,
     )
@@ -40,27 +55,28 @@ class AISystem(Base):
         nullable=True,
     )
 
-    model_type: Mapped[str | None] = mapped_column(
-        String(100),
-        nullable=True,
+    ai_technologies: Mapped[list[str]] = mapped_column(
+        JSON,
+        nullable=False,
+        default=list,
     )
 
     deployment_status: Mapped[str] = mapped_column(
         String(50),
-        default="Planned",
         nullable=False,
+        default="Planned",
     )
 
     risk_level: Mapped[str] = mapped_column(
         String(50),
-        default="Not Assessed",
         nullable=False,
+        default="Not Assessed",
     )
 
     eu_ai_act_category: Mapped[str] = mapped_column(
         String(100),
-        default="Not Classified",
         nullable=False,
+        default="Not Classified",
     )
 
     data_classification: Mapped[str | None] = mapped_column(
@@ -70,18 +86,29 @@ class AISystem(Base):
 
     status: Mapped[str] = mapped_column(
         String(50),
-        default="Active",
         nullable=False,
+        default="Active",
     )
 
     created_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        default=datetime.utcnow,
+        DateTime(timezone=True),
         nullable=False,
+        default=datetime.utcnow,
+    )
+
+    organization = relationship(
+        "Organization",
+        back_populates="ai_systems",
     )
 
     generated_risks = relationship(
-    "GeneratedRisk",
-    back_populates="ai_system",
-    cascade="all, delete-orphan",
-)
+        "GeneratedRisk",
+        back_populates="ai_system",
+        cascade="all, delete-orphan",
+    )
+
+    risks = relationship(
+        "AIRisk",
+        back_populates="ai_system",
+        cascade="all, delete-orphan",
+    )

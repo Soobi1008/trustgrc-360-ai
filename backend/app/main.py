@@ -9,6 +9,9 @@ from app.db.session import engine
 from app.api.auth import router as auth_router
 from app.api.admin_users import (
     router as admin_users_router,
+)   
+from app.api.risks import (
+    router as risks_router,
 )
 
 import app.models  # Registers all SQLAlchemy models
@@ -39,7 +42,7 @@ app.include_router(ai_systems_router)
 app.include_router(intelligence_router)
 app.include_router(auth_router)
 app.include_router(admin_users_router)
-
+app.include_router(risks_router)
 
 @app.get("/")
 async def root() -> dict[str, str]:

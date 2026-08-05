@@ -58,3 +58,9 @@ class Organization(Base):
         "User",
         back_populates="organization",
     )
+
+    ai_systems = relationship(
+        "AISystem",
+        back_populates="organization",
+        cascade="all, delete-orphan",
+    )
