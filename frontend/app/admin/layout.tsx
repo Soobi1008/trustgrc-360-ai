@@ -25,6 +25,18 @@ const menuItems = [
     href: "/admin/users",
   },
   {
+    label: "AI Inventory",
+    href: "/admin/ai-systems",
+  },
+  {
+    label: "Risk Register",
+    href: "/admin/risks",
+  },
+  {
+    label: "Assessments",
+    href: "/admin/assessments",
+  },
+  {
     label: "Frameworks",
     href: "/admin/frameworks",
   },

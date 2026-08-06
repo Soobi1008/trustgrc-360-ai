@@ -3,6 +3,7 @@ from app.models.ai_system import AISystem
 from app.models.generated_risk import GeneratedRisk
 from app.models.user import User
 from app.models.ai_risk import AIRisk
+from app.models.assessment import AIAssessment
 
 __all__ = [
     "Organization",
@@ -10,4 +11,5 @@ __all__ = [
     "GeneratedRisk",
     "User",
     "AIRisk",
+    "AIAssessment",
 ]
