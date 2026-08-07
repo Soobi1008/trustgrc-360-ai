@@ -18,6 +18,8 @@ from app.api.assessments import (
     router as assessments_router,
 )
 
+from app.api.v1.regulations import router as regulations_router
+
 import app.models  # Registers all SQLAlchemy models
 
 Base.metadata.create_all(bind=engine)
@@ -48,6 +50,12 @@ app.include_router(auth_router)
 app.include_router(admin_users_router)
 app.include_router(risks_router)
 app.include_router(assessments_router)
+
+app.include_router(
+    regulations_router,
+    prefix="/api/v1/regulations",
+    tags=["Regulatory Library"],
+)
 
 @app.get("/")
 async def root() -> dict[str, str]:
