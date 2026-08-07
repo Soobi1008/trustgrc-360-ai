@@ -12,6 +12,11 @@ from app.models.industry import Industry
 from app.models.data_category import DataCategory
 from app.models.regulation import Regulation
 
+from app.models.regulation_article import RegulationArticle
+from app.models.regulation_obligation import RegulationObligation
+from app.models.obligation_control import ObligationControl
+from app.models.assessment_finding import AssessmentFinding
+
 from app.models.regulation_jurisdiction import (
     RegulationJurisdiction,
 )
@@ -48,4 +53,8 @@ __all__ = [
     "RegulationDataCategory",
     "OrganizationJurisdiction",
     "OrganizationDataCategory",
+    "RegulationArticle",
+    "RegulationObligation",
+    "ObligationControl",
+    "AssessmentFinding",
 ]
