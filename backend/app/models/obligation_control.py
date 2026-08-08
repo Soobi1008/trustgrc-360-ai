@@ -5,6 +5,7 @@ from sqlalchemy import (
     ForeignKey,
     String,
     Text,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.orm import (
@@ -18,6 +19,14 @@ from app.db.base import Base
 
 class ObligationControl(Base):
     __tablename__ = "obligation_controls"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "obligation_id",
+            "control_code",
+            name="uq_obligation_control_code",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(
         primary_key=True,
