@@ -20,6 +20,10 @@ from app.api.assessments import (
 
 from app.api.v1.regulations import router as regulations_router
 
+from app.api.v1.applicability import (
+    router as applicability_router,
+)
+
 import app.models  # Registers all SQLAlchemy models
 
 Base.metadata.create_all(bind=engine)
@@ -55,6 +59,12 @@ app.include_router(
     regulations_router,
     prefix="/api/v1/regulations",
     tags=["Regulatory Library"],
+)
+
+app.include_router(
+    applicability_router,
+    prefix="/api/v1/applicability",
+    tags=["Applicability Engine"],
 )
 
 @app.get("/")
