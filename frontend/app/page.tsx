@@ -40,22 +40,12 @@ const capabilities = [
   },
 ];
 
-const steps = [
-  "Discover",
-  "Classify",
-  "Assess",
-  "Govern",
-  "Evidence",
-  "Remediate",
-  "Report",
-];
-
 const frameworks = [
   "GDPR",
   "EU AI Act",
   "ISO/IEC 42001",
   "NIST AI RMF",
-  "ISO 27001",
+  "ISO/IEC 27001",
   "HIPAA",
   "Global Privacy",
 ];
@@ -65,11 +55,14 @@ export default function HomePage() {
     <main className="landing-page">
       <Navbar />
 
-      {/* HERO */}
+      {/* =====================================================
+          HERO
+          ===================================================== */}
       <section className="hero">
         <div className="hero-glow hero-glow-one" />
         <div className="hero-glow hero-glow-two" />
 
+        {/* HERO MESSAGE */}
         <div className="hero-content">
           <div className="eyebrow">
             <span className="eyebrow-dot" />
@@ -95,46 +88,114 @@ export default function HomePage() {
               Explore the Platform
               <span>→</span>
             </Link>
-
-            <Link href="/contact" className="secondary-button">
-              Request a Demo
-            </Link>
           </div>
 
           <div className="hero-trust-row">
-            <div>
+            <div className="trust-metric">
               <strong>360°</strong>
               <span>Governance View</span>
             </div>
 
-            <div>
+            <div className="trust-metric">
               <strong>Multi-Regulation</strong>
               <span>Compliance Intelligence</span>
             </div>
 
-            <div>
+            <div className="trust-metric">
               <strong>Evidence-Led</strong>
               <span>Audit Readiness</span>
             </div>
           </div>
         </div>
 
-        {/* REGULATORY INTELLIGENCE VISUAL */}
-        <div className="hero-visual">
-          <div className="intelligence-panel">
+        {/* =====================================================
+            HERO PRODUCT SHOWCASE
+            ===================================================== */}
+        <div className="hero-product-showcase">
+
+          {/* AI GOVERNANCE CARD */}
+          <article className="hero-side-card governance-card">
+            <div className="side-card-title-row">
+              <div className="side-card-icon governance-icon">
+                ◎
+              </div>
+
+              <div>
+                <span className="side-card-kicker">
+                  GOVERN
+                </span>
+
+                <h3>AI Governance</h3>
+              </div>
+            </div>
+
+            <p className="side-card-description">
+              Establish governance. Manage risk.
+              Demonstrate control.
+            </p>
+
+            <div className="side-card-divider" />
+
+            <ul className="side-card-list">
+              <li>
+                <span className="check-icon">✓</span>
+                <span>AI Inventory</span>
+              </li>
+
+              <li>
+                <span className="check-icon">✓</span>
+                <span>Risk Register</span>
+              </li>
+
+              <li>
+                <span className="check-icon">✓</span>
+                <span>Assessments</span>
+              </li>
+
+              <li>
+                <span className="check-icon">✓</span>
+                <span>Controls</span>
+              </li>
+
+              <li>
+                <span className="check-icon">✓</span>
+                <span>Evidence</span>
+              </li>
+            </ul>
+
+            <div className="governance-score">
+              <div className="governance-footer">
+                  <strong>5 Core Areas</strong>
+                <span>Governance Coverage</span>
+              </div>
+
+              <div className="score-track">
+                <div className="score-progress" />
+              </div>
+            </div>
+          </article>
+
+          {/* AI SYSTEM ANIMATION */}
+          <article className="intelligence-panel">
             <div className="panel-header">
               <div>
                 <span className="status-dot" />
-                Regulatory Intelligence
+                <strong>AI System</strong>
               </div>
 
-              <span className="live-label">LIVE</span>
+              <span className="live-label">
+                LIVE
+              </span>
             </div>
 
             <div className="network">
+              <div className="network-orbit orbit-one" />
+              <div className="network-orbit orbit-two" />
+              <div className="network-orbit orbit-three" />
+
               <div className="centre-node">
                 <span>AI</span>
-                <strong>System</strong>
+                <strong>SYSTEM</strong>
               </div>
 
               <div className="orbit-node node-gdpr">
@@ -163,29 +224,120 @@ export default function HomePage() {
             </div>
 
             <div className="panel-result">
-              <div>
-                <span>Applicability Engine</span>
-                <strong>Regulatory context identified</strong>
+              <div className="engine-icon">
+                ◎
               </div>
 
-              <span className="result-check">✓</span>
+              <div className="engine-copy">
+                <strong>
+                  Applicability Engine
+                </strong>
+
+                <span>
+                  Regulatory context identified
+                </span>
+              </div>
+
+              <span className="result-check">
+                ✓
+              </span>
             </div>
-          </div>
+          </article>
+
+          {/* REGULATORY INTELLIGENCE CARD */}
+          <article className="hero-side-card regulatory-card">
+            <div className="side-card-title-row">
+              <div className="side-card-icon regulatory-icon">
+                ◇
+              </div>
+
+              <div>
+                <span className="side-card-kicker">
+                  COMPLY
+                </span>
+
+                <h3>
+                  Regulatory Intelligence
+                </h3>
+              </div>
+            </div>
+
+            <p className="side-card-description">
+              Identify obligations. Map controls.
+              Stay audit ready.
+            </p>
+
+            <div className="side-card-divider" />
+
+            <ul className="side-card-list">
+              <li>
+                <span className="check-icon purple-check">
+                  ✓
+                </span>
+                <span>GDPR</span>
+              </li>
+
+              <li>
+                <span className="check-icon purple-check">
+                  ✓
+                </span>
+                <span>EU AI Act</span>
+              </li>
+
+              <li>
+                <span className="check-icon purple-check">
+                  ✓
+                </span>
+                <span>ISO/IEC 42001</span>
+              </li>
+
+              <li>
+                <span className="check-icon purple-check">
+                  ✓
+                </span>
+                <span>NIST AI RMF</span>
+              </li>
+            </ul>
+
+            <div className="controls-summary">
+              <div className="controls-summary-icon">
+                ≡
+              </div>
+
+              <div>
+                <strong>
+                  12 Controls Identified
+                </strong>
+
+                <span>
+                  Across 4 frameworks
+                </span>
+              </div>
+            </div>
+          </article>
         </div>
       </section>
 
-      {/* FRAMEWORKS */}
+      {/* =====================================================
+          FRAMEWORKS
+          ===================================================== */}
       <section className="framework-strip">
-        <p>Designed for modern AI governance frameworks</p>
+        <p>
+          Designed for modern AI governance frameworks
+        </p>
 
         <div className="framework-row">
           {frameworks.map((framework) => (
-            <span key={framework}>{framework}</span>
+            <span key={framework}>
+              {framework}
+            </span>
           ))}
         </div>
       </section>
 
-      {/* PLATFORM */}
+      {/* =====================================================
+          PLATFORM
+          ===================================================== */}
       <section
         className="section platform-section"
         id="platform"
@@ -200,13 +352,17 @@ export default function HomePage() {
           </h2>
 
           <p>
-            Replace fragmented governance processes with a connected
-            system for understanding AI risk, regulatory applicability
-            and compliance obligations.
+            Replace fragmented governance processes with a
+            connected system for understanding AI risk,
+            regulatory applicability and compliance
+            obligations.
           </p>
         </div>
 
-        <div className="capability-grid" id="services">
+        <div
+          className="capability-grid"
+          id="services"
+        >
           {capabilities.map((capability) => (
             <article
               className="capability-card"
@@ -216,9 +372,13 @@ export default function HomePage() {
                 {capability.icon}
               </div>
 
-              <h3>{capability.title}</h3>
+              <h3>
+                {capability.title}
+              </h3>
 
-              <p>{capability.description}</p>
+              <p>
+                {capability.description}
+              </p>
 
               <span className="card-link">
                 Explore capability →
@@ -228,7 +388,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* REGULATORY INTELLIGENCE CONTENT */}
+      {/* =====================================================
+          REGULATORY INTELLIGENCE
+          ===================================================== */}
       <section className="intelligence-section">
         <div className="intelligence-copy">
           <span className="section-label">
@@ -242,10 +404,10 @@ export default function HomePage() {
           </h2>
 
           <p>
-            TrustGRC AI 360 connects legal requirements to operational
-            governance so teams can understand not only which
-            regulation applies, but why it applies and what they need
-            to do next.
+            TrustGRC AI 360 connects legal requirements to
+            operational governance so teams can understand
+            not only which regulation applies, but why it
+            applies and what they need to do next.
           </p>
 
           <div className="knowledge-path">
@@ -263,7 +425,10 @@ export default function HomePage() {
           <div className="compliance-card-top">
             <div>
               <small>AI SYSTEM</small>
-              <strong>Customer Decision AI</strong>
+
+              <strong>
+                Customer Decision AI
+              </strong>
             </div>
 
             <span className="risk-badge">
@@ -272,50 +437,61 @@ export default function HomePage() {
           </div>
 
           <div className="compliance-item">
-            <div className="compliance-icon">✓</div>
+            <div className="compliance-icon">
+              ✓
+            </div>
 
             <div>
               <strong>GDPR</strong>
 
               <p>
-                Applicable through jurisdiction and personal-data
-                processing.
+                Applicable through jurisdiction and
+                personal-data processing.
               </p>
             </div>
           </div>
 
           <div className="compliance-item">
-            <div className="compliance-icon">✓</div>
+            <div className="compliance-icon">
+              ✓
+            </div>
 
             <div>
               <strong>EU AI Act</strong>
 
               <p>
-                AI governance obligations identified for the system
-                context.
+                AI governance obligations identified
+                for the system context.
               </p>
             </div>
           </div>
 
           <div className="compliance-item muted-item">
-            <div className="compliance-icon">→</div>
+            <div className="compliance-icon">
+              →
+            </div>
 
             <div>
-              <strong>Required evidence</strong>
+              <strong>
+                Required evidence
+              </strong>
 
               <p>
-                Risk assessment, technical documentation, oversight
-                records and control evidence.
+                Risk assessment, technical documentation,
+                oversight records and control evidence.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      
-
-      {/* ABOUT */}
-      <section className="about-section" id="about">
+      {/* =====================================================
+          ABOUT
+          ===================================================== */}
+      <section
+        className="about-section"
+        id="about"
+      >
         <div>
           <span className="section-label">
             BUILT FOR TRUSTWORTHY AI
@@ -327,15 +503,22 @@ export default function HomePage() {
         </div>
 
         <p>
-          TrustGRC AI 360 is designed to connect governance, privacy,
-          risk, security and regulatory intelligence across the AI
-          lifecycle — helping organisations turn complex obligations
-          into practical, auditable actions.
+          TrustGRC AI 360 is designed to connect
+          governance, privacy, risk, security and
+          regulatory intelligence across the AI
+          lifecycle — helping organisations turn
+          complex obligations into practical,
+          auditable actions.
         </p>
       </section>
 
-      {/* CTA */}
-      <section className="cta-section" id="demo">
+      {/* =====================================================
+          CTA
+          ===================================================== */}
+      <section
+        className="cta-section"
+        id="demo"
+      >
         <div className="cta-content">
           <span className="section-label">
             TRUSTGRC AI 360
@@ -348,13 +531,17 @@ export default function HomePage() {
           </h2>
 
           <p>
-            Discover applicable requirements, assess risk, manage
-            controls and build evidence for trustworthy AI.
+            Discover applicable requirements, assess
+            risk, manage controls and build evidence
+            for trustworthy AI.
           </p>
         </div>
 
         <div className="cta-actions">
-          <Link href="/login" className="light-button">
+          <Link
+            href="/login"
+            className="light-button"
+          >
             Access Platform
           </Link>
 
@@ -367,15 +554,22 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* FOOTER */}
+      {/* =====================================================
+          FOOTER
+          ===================================================== */}
       <footer className="footer">
         <div className="footer-main">
           <div className="footer-brand">
             <div className="brand">
-              <span className="brand-mark">T</span>
+              <span className="brand-mark">
+                T
+              </span>
 
               <span>
-                <strong>TrustGRC AI 360</strong>
+                <strong>
+                  TrustGRC AI 360
+                </strong>
+
                 <small>
                   Governance • Risk • Compliance
                 </small>
@@ -383,8 +577,9 @@ export default function HomePage() {
             </div>
 
             <p>
-              Building trust in AI through connected governance,
-              regulatory intelligence and risk management.
+              Building trust in AI through connected
+              governance, regulatory intelligence and
+              risk management.
             </p>
           </div>
 
@@ -432,7 +627,7 @@ export default function HomePage() {
                 API Reference
               </Link>
 
-              <Link href="/resources/regulatory-library">
+              <Link href="/platform/regulatory-library">
                 Regulatory Library
               </Link>
             </div>
@@ -457,7 +652,8 @@ export default function HomePage() {
 
         <div className="footer-bottom">
           <span>
-            © 2026 TrustGRC AI 360. All rights reserved.
+            © 2026 TrustGRC AI 360.
+            All rights reserved.
           </span>
 
           <span>
