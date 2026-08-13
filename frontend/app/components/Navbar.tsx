@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import "./navbar.css";
+
 const platformItems = [
   { label: "AI Governance", href: "/platform/ai-governance" },
   { label: "AI Inventory", href: "/platform/ai-inventory" },

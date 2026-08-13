@@ -1,6 +1,8 @@
 import Link from "next/link";
 import Navbar from "../components/Navbar";
 
+import "./pricing.css";
+
 const plans = [
   {
     name: "Starter",
