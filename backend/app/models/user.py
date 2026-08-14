@@ -1,7 +1,17 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, func
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    String,
+    func,
+)
+from sqlalchemy.orm import (
+    Mapped,
+    mapped_column,
+    relationship,
+)
 
 from app.db.base import Base
 
@@ -21,6 +31,17 @@ class User(Base):
         index=True,
     )
 
+    email_verified: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+    )
+
+    email_verified_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
     full_name: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
@@ -38,7 +59,10 @@ class User(Base):
     )
 
     organization_id: Mapped[int | None] = mapped_column(
-        ForeignKey("organizations.id", ondelete="SET NULL"),
+        ForeignKey(
+            "organizations.id",
+            ondelete="SET NULL",
+        ),
         nullable=True,
         index=True,
     )

@@ -8,7 +8,6 @@ import {
   useState,
 } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 import {
   clearAuthentication,
@@ -46,6 +45,13 @@ type RegistrationResponse = {
   message: string;
   organization_id: number;
   user_id: number;
+  verification_url?: string | null;
+};
+
+
+type ResendVerificationResponse = {
+  status: string;
+  message: string;
 };
 
 
@@ -106,8 +112,6 @@ const commonPasswordWords = [
 
 
 export default function RegisterPage() {
-  const router = useRouter();
-
   const [
     organisationName,
     setOrganisationName,
@@ -159,11 +163,6 @@ export default function RegisterPage() {
   ] = useState("");
 
   const [
-    successMessage,
-    setSuccessMessage,
-  ] = useState("");
-
-  const [
     challenge,
     setChallenge,
   ] =
@@ -181,12 +180,35 @@ export default function RegisterPage() {
     setChallengeError,
   ] = useState("");
 
+  const [
+    registrationComplete,
+    setRegistrationComplete,
+  ] = useState(false);
 
-  /*
-   * ---------------------------------------------------------
-   * EMAIL VALIDATION
-   * ---------------------------------------------------------
-   */
+  const [
+    registeredEmail,
+    setRegisteredEmail,
+  ] = useState("");
+
+  const [
+    isResending,
+    setIsResending,
+  ] = useState(false);
+
+  const [
+    resendMessage,
+    setResendMessage,
+  ] = useState("");
+
+  const [
+    resendError,
+    setResendError,
+  ] = useState("");
+
+
+  // =========================================================
+  // EMAIL VALIDATION
+  // =========================================================
 
   const emailStatus = useMemo(() => {
     const normalizedEmail =
@@ -262,142 +284,141 @@ export default function RegisterPage() {
     return {
       valid: true,
       message:
-        "Business email format accepted. Domain ownership will be verified during registration.",
+        "Business email format accepted. Email ownership will be verified during registration.",
     };
   }, [email]);
 
 
-  /*
-   * ---------------------------------------------------------
-   * PASSWORD POLICY
-   * ---------------------------------------------------------
-   */
+  // =========================================================
+  // PASSWORD POLICY
+  // =========================================================
 
   const passwordRequirements =
-    useMemo<
-      PasswordRequirement[]
-    >(() => {
-      const lowercasePassword =
-        password.toLowerCase();
+    useMemo<PasswordRequirement[]>(
+      () => {
+        const lowercasePassword =
+          password.toLowerCase();
 
-      const normalizedPassword =
-        lowercasePassword.replace(
-          /[^a-z0-9]/g,
-          ""
-        );
-
-      const normalizedFirstName =
-        firstName
-          .toLowerCase()
-          .replace(
+        const normalizedPassword =
+          lowercasePassword.replace(
             /[^a-z0-9]/g,
             ""
           );
 
-      const normalizedLastName =
-        lastName
-          .toLowerCase()
-          .replace(
-            /[^a-z0-9]/g,
-            ""
-          );
+        const normalizedFirstName =
+          firstName
+            .toLowerCase()
+            .replace(
+              /[^a-z0-9]/g,
+              ""
+            );
 
-      const normalizedOrganisation =
-        organisationName
-          .toLowerCase()
-          .replace(
-            /[^a-z0-9]/g,
-            ""
-          );
+        const normalizedLastName =
+          lastName
+            .toLowerCase()
+            .replace(
+              /[^a-z0-9]/g,
+              ""
+            );
 
-      const emailUsername =
-        email.includes("@")
-          ? email
-              .split("@")[0]
-              .toLowerCase()
-              .replace(
-                /[^a-z0-9]/g,
-                ""
+        const normalizedOrganisation =
+          organisationName
+            .toLowerCase()
+            .replace(
+              /[^a-z0-9]/g,
+              ""
+            );
+
+        const emailUsername =
+          email.includes("@")
+            ? email
+                .split("@")[0]
+                .toLowerCase()
+                .replace(
+                  /[^a-z0-9]/g,
+                  ""
+                )
+            : "";
+
+        const containsPersonalInfo =
+          [
+            normalizedFirstName,
+            normalizedLastName,
+            normalizedOrganisation,
+            emailUsername,
+          ].some(
+            (value) =>
+              value.length >= 3 &&
+              normalizedPassword.includes(
+                value
               )
-          : "";
+          );
 
-      const containsPersonalInfo =
-        [
-          normalizedFirstName,
-          normalizedLastName,
-          normalizedOrganisation,
-          emailUsername,
-        ].some(
-          (value) =>
-            value.length >= 3 &&
-            normalizedPassword.includes(
-              value
-            )
-        );
+        const containsCommonWord =
+          commonPasswordWords.some(
+            (word) =>
+              lowercasePassword.includes(
+                word
+              )
+          );
 
-      const containsCommonWord =
-        commonPasswordWords.some(
-          (word) =>
-            lowercasePassword.includes(
-              word
-            )
-        );
-
-      return [
-        {
-          label:
-            "12 or more characters",
-          valid:
-            password.length >= 12,
-        },
-        {
-          label:
-            "At least one uppercase letter",
-          valid:
-            /[A-Z]/.test(password),
-        },
-        {
-          label:
-            "At least one lowercase letter",
-          valid:
-            /[a-z]/.test(password),
-        },
-        {
-          label:
-            "At least one number",
-          valid:
-            /\d/.test(password),
-        },
-        {
-          label:
-            "At least one special character",
-          valid:
-            /[!@#$%^&*()_\-+=\[\]{};:'",.<>/?\\|`~]/.test(
-              password
-            ),
-        },
-        {
-          label:
-            "Does not contain your name, email identifier or organisation name",
-          valid:
-            password.length > 0 &&
-            !containsPersonalInfo,
-        },
-        {
-          label:
-            "Does not contain a common or prohibited password word",
-          valid:
-            password.length > 0 &&
-            !containsCommonWord,
-        },
-      ];
-    }, [
-      password,
-      firstName,
-      lastName,
-      organisationName,
-      email,
-    ]);
+        return [
+          {
+            label:
+              "12 or more characters",
+            valid:
+              password.length >= 12,
+          },
+          {
+            label:
+              "At least one uppercase letter",
+            valid:
+              /[A-Z]/.test(password),
+          },
+          {
+            label:
+              "At least one lowercase letter",
+            valid:
+              /[a-z]/.test(password),
+          },
+          {
+            label:
+              "At least one number",
+            valid:
+              /\d/.test(password),
+          },
+          {
+            label:
+              "At least one special character",
+            valid:
+              /[!@#$%^&*()_\-+=\[\]{};:'",.<>/?\\|`~]/.test(
+                password
+              ),
+          },
+          {
+            label:
+              "Does not contain your name, email identifier or organisation name",
+            valid:
+              password.length > 0 &&
+              !containsPersonalInfo,
+          },
+          {
+            label:
+              "Does not contain a common or prohibited password word",
+            valid:
+              password.length > 0 &&
+              !containsCommonWord,
+          },
+        ];
+      },
+      [
+        password,
+        firstName,
+        lastName,
+        organisationName,
+        email,
+      ]
+    );
 
 
   const passwordPolicyPassed =
@@ -413,11 +434,14 @@ export default function RegisterPage() {
     password === confirmPassword;
 
 
-  /*
-   * ---------------------------------------------------------
-   * HUMAN VERIFICATION
-   * ---------------------------------------------------------
-   */
+  const passwordMismatch =
+    confirmPassword.length > 0 &&
+    password !== confirmPassword;
+
+
+  // =========================================================
+  // HUMAN VERIFICATION
+  // =========================================================
 
   const loadHumanChallenge =
     useCallback(async () => {
@@ -497,8 +521,13 @@ export default function RegisterPage() {
 
 
   useEffect(() => {
-    void loadHumanChallenge();
-  }, [loadHumanChallenge]);
+    if (!registrationComplete) {
+      void loadHumanChallenge();
+    }
+  }, [
+    loadHumanChallenge,
+    registrationComplete,
+  ]);
 
 
   function clearSensitiveFields() {
@@ -515,11 +544,9 @@ export default function RegisterPage() {
   }
 
 
-  /*
-   * ---------------------------------------------------------
-   * REGISTRATION
-   * ---------------------------------------------------------
-   */
+  // =========================================================
+  // REGISTRATION
+  // =========================================================
 
   async function handleRegistration(
     event: FormEvent<HTMLFormElement>
@@ -527,14 +554,7 @@ export default function RegisterPage() {
     event.preventDefault();
 
     setErrorMessage("");
-    setSuccessMessage("");
 
-
-    /*
-     * Missing ordinary fields:
-     * preserve password and CAPTCHA because this is
-     * not yet considered a security-sensitive failure.
-     */
 
     if (
       !organisationName.trim() ||
@@ -551,11 +571,6 @@ export default function RegisterPage() {
     }
 
 
-    /*
-     * Invalid email:
-     * clear sensitive fields and issue a new challenge.
-     */
-
     if (!emailStatus.valid) {
       setErrorMessage(
         emailStatus.message ||
@@ -563,14 +578,9 @@ export default function RegisterPage() {
       );
 
       await resetAfterFailure();
-
       return;
     }
 
-
-    /*
-     * Password policy failure.
-     */
 
     if (!passwordPolicyPassed) {
       setErrorMessage(
@@ -578,29 +588,19 @@ export default function RegisterPage() {
       );
 
       await resetAfterFailure();
-
       return;
     }
 
 
-    /*
-     * Password mismatch.
-     */
-
+    // Do not clear the fields for a simple
+    // password mismatch. Let the user correct it.
     if (!passwordsMatch) {
       setErrorMessage(
-        "The passwords do not match."
+        "Passwords do not match. Please enter the same password in both fields."
       );
-
-      await resetAfterFailure();
-
       return;
     }
 
-
-    /*
-     * Human verification must exist.
-     */
 
     if (!challenge) {
       setErrorMessage(
@@ -618,10 +618,6 @@ export default function RegisterPage() {
     }
 
 
-    /*
-     * Terms.
-     */
-
     if (!acceptTerms) {
       setErrorMessage(
         "Please accept the Terms of Service and Privacy Notice."
@@ -636,13 +632,17 @@ export default function RegisterPage() {
       );
 
       await resetAfterFailure();
-
       return;
     }
 
 
     try {
       setIsSubmitting(true);
+
+      const normalizedEmail =
+        email
+          .trim()
+          .toLowerCase();
 
       const response =
         await fetch(
@@ -665,9 +665,8 @@ export default function RegisterPage() {
               last_name:
                 lastName.trim(),
 
-              email: email
-                .trim()
-                .toLowerCase(),
+              email:
+                normalizedEmail,
 
               password,
 
@@ -707,10 +706,6 @@ export default function RegisterPage() {
           detail.toLowerCase();
 
 
-        /*
-         * Duplicate email.
-         */
-
         if (
           normalizedDetail.includes(
             "already exists"
@@ -724,10 +719,6 @@ export default function RegisterPage() {
           );
         }
 
-
-        /*
-         * Existing organisation/domain.
-         */
 
         if (
           normalizedDetail.includes(
@@ -746,66 +737,38 @@ export default function RegisterPage() {
         }
 
 
-        /*
-         * Human verification / CAPTCHA errors.
-         */
-
-        if (
-          normalizedDetail.includes(
-            "human verification"
-          ) ||
-          normalizedDetail.includes(
-            "challenge"
-          )
-        ) {
-          throw new Error(
-            detail
-          );
-        }
-
-
-        /*
-         * Password policy and other backend errors.
-         */
-
         throw new Error(
           detail
         );
       }
 
 
-      /*
-       * Successful registration.
-       */
-
-      setSuccessMessage(
-        "Organisation account created successfully. Please sign in with your new account."
-      );
-
-
-      /*
-       * Remove any previous authenticated user/session.
-       * This prevents another organisation's stored
-       * session from automatically bypassing login.
-       */
-
+      // Remove any old authenticated session so
+      // registration can never inherit another user's login.
       clearAuthentication();
 
+      setRegisteredEmail(
+        normalizedEmail
+      );
+      
+      try {
+        window.sessionStorage.setItem(
+          "trustgrc_pending_verification_email",
+              normalizedEmail
+        );
+      } catch {
+        // Ignore sessionStorage errors.
+      }
 
-      setOrganisationName("");
-      setFirstName("");
-      setLastName("");
-      setEmail("");
+      setRegistrationComplete(
+        true
+      );
+
+      // Clear sensitive information after success.
       setPassword("");
       setConfirmPassword("");
       setHumanAnswer("");
-      setAcceptTerms(false);
       setChallenge(null);
-
-
-      setTimeout(() => {
-        router.replace("/login");
-      }, 2200);
 
     } catch (error) {
       let message =
@@ -830,12 +793,6 @@ export default function RegisterPage() {
       );
 
 
-      /*
-       * Any backend registration failure:
-       * clear passwords and fetch a fresh
-       * human-verification challenge.
-       */
-
       await resetAfterFailure();
 
     } finally {
@@ -844,10 +801,84 @@ export default function RegisterPage() {
   }
 
 
+  // =========================================================
+  // RESEND VERIFICATION
+  // =========================================================
+
+  async function handleResendVerification() {
+    if (
+      !API_URL ||
+      !registeredEmail
+    ) {
+      return;
+    }
+
+    try {
+      setIsResending(true);
+      setResendMessage("");
+      setResendError("");
+
+      const response =
+        await fetch(
+          `${API_URL}/api/v1/auth/resend-verification`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+              Accept:
+                "application/json",
+            },
+            body: JSON.stringify({
+              email:
+                registeredEmail,
+            }),
+          }
+        );
+
+      let data:
+        | ResendVerificationResponse
+        | ApiError = {};
+
+      try {
+        data =
+          (await response.json()) as
+            | ResendVerificationResponse
+            | ApiError;
+      } catch {
+        data = {};
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          "detail" in data &&
+          data.detail
+            ? data.detail
+            : "Unable to resend the verification email."
+        );
+      }
+
+      setResendMessage(
+        "A new verification email has been sent. Please check your inbox and junk/spam folder."
+      );
+
+    } catch (error) {
+      setResendError(
+        error instanceof Error
+          ? error.message
+          : "Unable to resend the verification email."
+      );
+
+    } finally {
+      setIsResending(false);
+    }
+  }
+
+
   const challengeUsesOptions =
     Boolean(
       challenge &&
-        challenge.options.length > 0
+      challenge.options.length > 0
     );
 
 
@@ -889,7 +920,6 @@ export default function RegisterPage() {
           TRUSTGRC AI 360
         </p>
 
-
         <h1
           style={{
             maxWidth: "650px",
@@ -904,7 +934,6 @@ export default function RegisterPage() {
           foundation for trustworthy
           AI governance
         </h1>
-
 
         <p
           style={{
@@ -922,7 +951,6 @@ export default function RegisterPage() {
           risk assessment and
           compliance capabilities.
         </p>
-
 
         <div
           style={{
@@ -956,7 +984,7 @@ export default function RegisterPage() {
 
 
       {/* =====================================================
-          REGISTRATION FORM
+          RIGHT PANEL
           ===================================================== */}
 
       <section
@@ -968,771 +996,959 @@ export default function RegisterPage() {
           padding: "40px",
         }}
       >
-        <form
-          onSubmit={
-            handleRegistration
-          }
-          autoComplete="off"
-          style={{
-            width: "100%",
-            maxWidth: "560px",
-            padding: "34px",
-            border:
-              "1px solid #e2e8f0",
-            borderRadius:
-              "16px",
-            backgroundColor:
-              "#ffffff",
-            boxShadow:
-              "0 18px 40px rgba(15, 23, 42, 0.08)",
-          }}
-        >
-          <h2
+        {registrationComplete ? (
+          <section
             style={{
-              marginTop: 0,
-              marginBottom:
-                "8px",
-              fontSize: "30px",
-              color: "#0f172a",
-            }}
-          >
-            Create organisation
-            account
-          </h2>
-
-
-          <p
-            style={{
-              marginTop: 0,
-              marginBottom:
-                "24px",
-              color: "#64748b",
-              lineHeight: 1.6,
-            }}
-          >
-            Use your
-            organisation&apos;s
-            official email address.
-          </p>
-
-
-          {errorMessage && (
-            <MessageBox
-              tone="error"
-              message={
-                errorMessage
-              }
-            />
-          )}
-
-
-          {successMessage && (
-            <MessageBox
-              tone="success"
-              message={
-                successMessage
-              }
-            />
-          )}
-
-
-          {/* ORGANISATION */}
-
-          <label
-            style={labelStyle}
-          >
-            Organisation / Company
-            name
-
-            <input
-              type="text"
-              required
-              value={
-                organisationName
-              }
-              onChange={(event) =>
-                setOrganisationName(
-                  event.target
-                    .value
-                )
-              }
-              placeholder="Example Healthcare Ltd"
-              style={
-                inputStyle
-              }
-            />
-          </label>
-
-
-          {/* FIRST / LAST NAME */}
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns:
-                "1fr 1fr",
-              gap: "14px",
-              marginTop: "18px",
-            }}
-          >
-            <label
-              style={labelStyle}
-            >
-              First name
-
-              <input
-                type="text"
-                required
-                autoComplete="off"
-                value={
-                  firstName
-                }
-                onChange={(event) =>
-                  setFirstName(
-                    event.target
-                      .value
-                  )
-                }
-                placeholder="First name"
-                style={
-                  inputStyle
-                }
-              />
-            </label>
-
-
-            <label
-              style={labelStyle}
-            >
-              Last name
-
-              <input
-                type="text"
-                required
-                autoComplete="off"
-                value={
-                  lastName
-                }
-                onChange={(event) =>
-                  setLastName(
-                    event.target
-                      .value
-                  )
-                }
-                placeholder="Last name"
-                style={
-                  inputStyle
-                }
-              />
-            </label>
-          </div>
-
-
-          {/* EMAIL */}
-
-          <label
-            style={{
-              ...labelStyle,
-              marginTop: "18px",
-            }}
-          >
-            Work email address
-
-            <input
-              type="email"
-              required
-              autoComplete="off"
-              value={email}
-              onChange={(event) =>
-                setEmail(
-                  event.target.value
-                )
-              }
-              placeholder="name@company.com"
-              style={{
-                ...inputStyle,
-
-                borderColor:
-                  email &&
-                  emailStatus.valid
-                    ? "#86efac"
-                    : email &&
-                        !emailStatus.valid
-                      ? "#fca5a5"
-                      : "#cbd5e1",
-              }}
-            />
-
-
-            {emailStatus.message && (
-              <span
-                style={{
-                  marginTop: "-2px",
-                  color:
-                    emailStatus.valid
-                      ? "#15803d"
-                      : "#b91c1c",
-                  fontSize:
-                    "12px",
-                  fontWeight:
-                    500,
-                  lineHeight: 1.5,
-                }}
-              >
-                {emailStatus.valid
-                  ? "✓ "
-                  : ""}
-
-                {
-                  emailStatus.message
-                }
-              </span>
-            )}
-          </label>
-
-
-          {/* PASSWORD */}
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns:
-                "1fr 1fr",
-              gap: "14px",
-              marginTop: "18px",
-            }}
-          >
-            <label
-              style={labelStyle}
-            >
-              Password
-
-              <input
-                type="password"
-                required
-                autoComplete=
-                  "new-password"
-                value={password}
-                onChange={(event) =>
-                  setPassword(
-                    event.target
-                      .value
-                  )
-                }
-                placeholder="Create a strong password"
-                style={
-                  inputStyle
-                }
-              />
-            </label>
-
-
-            <label
-              style={labelStyle}
-            >
-              Confirm password
-
-              <input
-                type="password"
-                required
-                autoComplete=
-                  "new-password"
-                value={
-                  confirmPassword
-                }
-                onChange={(event) =>
-                  setConfirmPassword(
-                    event.target
-                      .value
-                  )
-                }
-                placeholder="Repeat password"
-                style={{
-                  ...inputStyle,
-
-                  borderColor:
-                    confirmPassword
-                      ? passwordsMatch
-                        ? "#86efac"
-                        : "#fca5a5"
-                      : "#cbd5e1",
-                }}
-              />
-            </label>
-          </div>
-
-
-          {/* PASSWORD REQUIREMENTS */}
-
-          {password && (
-            <div
-              style={{
-                marginTop: "14px",
-                padding: "14px",
-                border:
-                  "1px solid #e2e8f0",
-                borderRadius:
-                  "10px",
-                backgroundColor:
-                  "#f8fafc",
-              }}
-            >
-              <div
-                style={{
-                  marginBottom:
-                    "9px",
-                  color:
-                    "#334155",
-                  fontSize:
-                    "12px",
-                  fontWeight:
-                    800,
-                  textTransform:
-                    "uppercase",
-                  letterSpacing:
-                    "0.04em",
-                }}
-              >
-                Password security
-              </div>
-
-
-              <div
-                style={{
-                  display:
-                    "grid",
-                  gap: "6px",
-                }}
-              >
-                {passwordRequirements.map(
-                  (
-                    requirement
-                  ) => (
-                    <PasswordRule
-                      key={
-                        requirement.label
-                      }
-                      label={
-                        requirement.label
-                      }
-                      valid={
-                        requirement.valid
-                      }
-                    />
-                  )
-                )}
-              </div>
-
-
-              {confirmPassword && (
-                <PasswordRule
-                  label="Passwords match"
-                  valid={
-                    passwordsMatch
-                  }
-                />
-              )}
-            </div>
-          )}
-
-
-          {/* HUMAN VERIFICATION */}
-
-          <div
-            style={{
-              marginTop: "22px",
-              padding: "16px",
+              width: "100%",
+              maxWidth: "560px",
+              padding: "38px",
               border:
-                "1px solid #c7d2fe",
+                "1px solid #bbf7d0",
               borderRadius:
-                "11px",
+                "16px",
               backgroundColor:
-                "#f8faff",
+                "#ffffff",
+              boxShadow:
+                "0 18px 40px rgba(15, 23, 42, 0.08)",
             }}
           >
             <div
               style={{
-                display: "flex",
-                justifyContent:
-                  "space-between",
-                alignItems:
-                  "flex-start",
-                gap: "14px",
+                width: "58px",
+                height: "58px",
+                display: "grid",
+                placeItems:
+                  "center",
+                borderRadius:
+                  "50%",
+                backgroundColor:
+                  "#f0fdf4",
+                border:
+                  "1px solid #86efac",
+                color:
+                  "#15803d",
+                fontSize:
+                  "28px",
+                fontWeight:
+                  800,
               }}
             >
-              <div>
-                <div
-                  style={{
-                    fontSize:
-                      "12px",
-                    fontWeight:
-                      800,
-                    color:
-                      "#4338ca",
-                    textTransform:
-                      "uppercase",
-                    letterSpacing:
-                      "0.05em",
-                  }}
-                >
-                  Human Verification
-                </div>
+              ✓
+            </div>
 
+            <h2
+              style={{
+                margin:
+                  "22px 0 10px",
+                color:
+                  "#0f172a",
+                fontSize:
+                  "30px",
+              }}
+            >
+              Check your email
+            </h2>
 
-                <p
-                  style={{
-                    margin:
-                      "7px 0 0",
-                    color:
-                      "#334155",
-                    fontSize:
-                      "13px",
-                    lineHeight:
-                      1.6,
-                    fontWeight:
-                      600,
-                  }}
-                >
-                  {challengeLoading
-                    ? "Loading verification challenge..."
-                    : challenge
-                        ?.question ??
-                      "Verification challenge unavailable."}
-                </p>
+            <p
+              style={{
+                margin: 0,
+                color:
+                  "#475569",
+                lineHeight:
+                  1.7,
+              }}
+            >
+              Your organisation account
+              has been created successfully.
+              A verification email has been
+              sent to:
+            </p>
 
+            <div
+              style={{
+                margin:
+                  "18px 0",
+                padding:
+                  "13px 14px",
+                border:
+                  "1px solid #dbeafe",
+                borderRadius:
+                  "9px",
+                backgroundColor:
+                  "#eff6ff",
+                color:
+                  "#1e40af",
+                fontWeight:
+                  700,
+                wordBreak:
+                  "break-word",
+              }}
+            >
+              {registeredEmail}
+            </div>
 
-                {challenge && (
-                  <div
-                    style={{
-                      marginTop:
-                        "6px",
-                      color:
-                        "#64748b",
-                      fontSize:
-                        "10px",
-                    }}
-                  >
-                    Challenge type:{" "}
-
-                    {formatChallengeType(
-                      challenge.challenge_type
-                    )}
-
-                    {" • "}
-
-                    expires in{" "}
-
-                    {Math.round(
-                      challenge.expires_in_seconds /
-                        60
-                    )}{" "}
-
-                    minutes
-                  </div>
-                )}
-              </div>
-
-
-              <button
-                type="button"
-                onClick={() =>
-                  void loadHumanChallenge()
-                }
-                disabled={
-                  challengeLoading
-                }
-                style={{
-                  border:
-                    "1px solid #cbd5e1",
-                  borderRadius:
-                    "8px",
-                  padding:
-                    "7px 10px",
-                  backgroundColor:
-                    "#ffffff",
+            <p
+              style={{
+                margin:
+                  "0 0 22px",
                   color:
                     "#475569",
-                  fontSize:
-                    "11px",
-                  fontWeight:
-                    700,
-                  cursor:
-                    challengeLoading
-                      ? "not-allowed"
-                      : "pointer",
-                  opacity:
-                    challengeLoading
-                      ? 0.6
-                      : 1,
-                  whiteSpace:
-                    "nowrap",
-                }}
-              >
-                {challengeLoading
-                  ? "Loading..."
-                  : "New challenge"}
-              </button>
-            </div>
-
-
-            {challengeError && (
-              <div
-                style={{
-                  marginTop:
-                    "12px",
-                  padding:
-                    "10px 12px",
-                  borderRadius:
-                    "8px",
-                  border:
-                    "1px solid #fecaca",
-                  backgroundColor:
-                    "#fef2f2",
-                  color:
-                    "#991b1b",
-                  fontSize:
-                    "12px",
                   lineHeight:
-                    1.5,
+                    1.7,
                 }}
-              >
-                {
-                  challengeError
+            > 
+                Please open the email and
+                click the verification link.
+                You must verify your work
+                email address before signing
+                in to TrustGRC AI 360.
+              </p>
+
+            <div
+              style={{
+                margin: "0 0 22px",
+    padding: "14px 16px",
+    border: "1px solid #fde68a",
+    borderRadius: "10px",
+    backgroundColor: "#fffbeb",
+    color: "#92400e",
+    fontSize: "13px",
+    lineHeight: 1.6,
+  }}
+>
+  <div
+    style={{
+      marginBottom: "4px",
+      fontWeight: 800,
+    }}
+  >
+    Didn&apos;t receive the email?
+  </div>
+
+  <div>
+    Please check your{" "}
+    <strong>Spam or Junk folder</strong>.
+    If you still cannot find the email,
+    use the button below to send a new
+    verification email.
+  </div>
+</div>
+
+            {resendMessage && (
+              <MessageBox
+                tone="success"
+                message={
+                  resendMessage
                 }
-              </div>
+              />
             )}
 
+            {resendError && (
+              <MessageBox
+                tone="error"
+                message={
+                  resendError
+                }
+              />
+            )}
 
-            {/* CLICKABLE CAPTCHA OPTIONS */}
+            <button
+              type="button"
+              onClick={() =>
+                void handleResendVerification()
+              }
+              disabled={
+                isResending
+              }
+              style={{
+                width:
+                  "100%",
+                padding:
+                  "12px 18px",
+                border:
+                  "1px solid #2563eb",
+                borderRadius:
+                  "9px",
+                backgroundColor:
+                  "#ffffff",
+                color:
+                  "#2563eb",
+                cursor:
+                  isResending
+                    ? "not-allowed"
+                    : "pointer",
+                fontSize:
+                  "14px",
+                fontWeight:
+                  700,
+                opacity:
+                  isResending
+                    ? 0.6
+                    : 1,
+              }}
+            >
+              {isResending
+                ? "Sending..."
+                : "Resend verification email"}
+            </button>
 
-            {challengeUsesOptions &&
-              challenge && (
-                <div
-                  style={{
-                    marginTop:
-                      "14px",
-                    display:
-                      "grid",
-                    gridTemplateColumns:
-                      "repeat(2, minmax(0, 1fr))",
-                    gap: "9px",
-                  }}
-                >
-                  {challenge.options.map(
-                    (option) => {
-                      const selected =
-                        humanAnswer ===
-                        option;
+          </section>
+        ) : (
+          <form
+            onSubmit={
+              handleRegistration
+            }
+            autoComplete="off"
+            style={{
+              width: "100%",
+              maxWidth: "560px",
+              padding: "34px",
+              border:
+                "1px solid #e2e8f0",
+              borderRadius:
+                "16px",
+              backgroundColor:
+                "#ffffff",
+              boxShadow:
+                "0 18px 40px rgba(15, 23, 42, 0.08)",
+            }}
+          >
+            <h2
+              style={{
+                marginTop: 0,
+                marginBottom:
+                  "8px",
+                fontSize:
+                  "30px",
+                color:
+                  "#0f172a",
+              }}
+            >
+              Create organisation
+              account
+            </h2>
 
-                      return (
-                        <button
-                          key={
-                            option
-                          }
-                          type="button"
-                          onClick={() =>
-                            setHumanAnswer(
-                              option
-                            )
-                          }
-                          style={{
-                            padding:
-                              "11px 12px",
-                            borderRadius:
-                              "9px",
+            <p
+              style={{
+                marginTop: 0,
+                marginBottom:
+                  "24px",
+                color:
+                  "#64748b",
+                lineHeight:
+                  1.6,
+              }}
+            >
+              Use your
+              organisation&apos;s
+              official email address.
+            </p>
 
-                            border:
-                              selected
-                                ? "1px solid #4f46e5"
-                                : "1px solid #cbd5e1",
+            {errorMessage && (
+              <MessageBox
+                tone="error"
+                message={
+                  errorMessage
+                }
+              />
+            )}
 
-                            backgroundColor:
-                              selected
-                                ? "#eef2ff"
-                                : "#ffffff",
+            <label
+              style={labelStyle}
+            >
+              Organisation / Company
+              name
 
-                            color:
-                              selected
-                                ? "#3730a3"
-                                : "#334155",
+              <input
+                type="text"
+                required
+                value={
+                  organisationName
+                }
+                onChange={(event) =>
+                  setOrganisationName(
+                    event.target.value
+                  )
+                }
+                placeholder="Example Healthcare Ltd"
+                style={
+                  inputStyle
+                }
+              />
+            </label>
 
-                            fontSize:
-                              challenge.challenge_type ===
-                              "shape_pattern"
-                                ? "22px"
-                                : "12px",
+            <div
+              style={{
+                display:
+                  "grid",
+                gridTemplateColumns:
+                  "1fr 1fr",
+                gap:
+                  "14px",
+                marginTop:
+                  "18px",
+              }}
+            >
+              <label
+                style={labelStyle}
+              >
+                First name
 
-                            fontWeight:
-                              700,
-
-                            cursor:
-                              "pointer",
-                          }}
-                        >
-                          {selected
-                            ? "✓ "
-                            : ""}
-
-                          {option}
-                        </button>
-                      );
-                    }
-                  )}
-                </div>
-              )}
-
-
-            {/* TEXT CAPTCHA ANSWER */}
-
-            {!challengeUsesOptions &&
-              challenge && (
                 <input
                   type="text"
                   required
                   autoComplete="off"
                   value={
-                    humanAnswer
+                    firstName
                   }
                   onChange={(event) =>
-                    setHumanAnswer(
-                      event.target
-                        .value
+                    setFirstName(
+                      event.target.value
                     )
                   }
-                  placeholder="Enter your answer"
-                  style={{
-                    ...inputStyle,
-                    marginTop:
-                      "13px",
-                  }}
+                  placeholder="First name"
+                  style={
+                    inputStyle
+                  }
                 />
-              )}
-          </div>
+              </label>
 
+              <label
+                style={labelStyle}
+              >
+                Last name
 
-          {/* TERMS */}
+                <input
+                  type="text"
+                  required
+                  autoComplete="off"
+                  value={
+                    lastName
+                  }
+                  onChange={(event) =>
+                    setLastName(
+                      event.target.value
+                    )
+                  }
+                  placeholder="Last name"
+                  style={
+                    inputStyle
+                  }
+                />
+              </label>
+            </div>
 
-          <label
-            style={{
-              display: "flex",
-              alignItems:
-                "flex-start",
-              gap: "9px",
-              marginTop: "18px",
-              color: "#475569",
-              fontSize: "13px",
-              lineHeight: 1.55,
-              cursor: "pointer",
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={
-                acceptTerms
-              }
-              onChange={(event) =>
-                setAcceptTerms(
-                  event.target
-                    .checked
-                )
-              }
+            <label
               style={{
-                marginTop: "3px",
-                width: "15px",
-                height: "15px",
-                accentColor:
-                  "#2563eb",
-              }}
-            />
-
-
-            <span>
-              I agree to the
-              TrustGRC AI 360 Terms
-              of Service and Privacy
-              Notice.
-            </span>
-          </label>
-
-
-          {/* CREATE ACCOUNT */}
-
-          <button
-            type="submit"
-            disabled={
-              isSubmitting ||
-              challengeLoading ||
-              challenge === null
-            }
-            style={{
-              width: "100%",
-              marginTop: "24px",
-              padding:
-                "12px 18px",
-              border: "none",
-              borderRadius:
-                "9px",
-
-              backgroundColor:
-                isSubmitting ||
-                challengeLoading ||
-                challenge === null
-                  ? "#94a3b8"
-                  : "#2563eb",
-
-              color: "#ffffff",
-
-              cursor:
-                isSubmitting ||
-                challengeLoading ||
-                challenge === null
-                  ? "not-allowed"
-                  : "pointer",
-
-              fontSize: "15px",
-              fontWeight: 700,
-            }}
-          >
-            {isSubmitting
-              ? "Creating account..."
-              : "Create organisation account"}
-          </button>
-
-
-          {/* SIGN IN */}
-
-          <div
-            style={{
-              marginTop: "20px",
-              paddingTop:
-                "18px",
-              borderTop:
-                "1px solid #e2e8f0",
-              textAlign:
-                "center",
-              color: "#64748b",
-              fontSize:
-                "13px",
-            }}
-          >
-            Already have an
-            account?{" "}
-
-            <Link
-              href="/login"
-              style={{
-                color:
-                  "#2563eb",
-                fontWeight:
-                  700,
-                textDecoration:
-                  "none",
+                ...labelStyle,
+                marginTop:
+                  "18px",
               }}
             >
-              Sign in
-            </Link>
-          </div>
-        </form>
+              Work email address
+
+              <input
+                type="email"
+                required
+                autoComplete="off"
+                value={
+                  email
+                }
+                onChange={(event) =>
+                  setEmail(
+                    event.target.value
+                  )
+                }
+                placeholder="name@company.com"
+                style={{
+                  ...inputStyle,
+                  borderColor:
+                    email &&
+                    emailStatus.valid
+                      ? "#86efac"
+                      : email &&
+                          !emailStatus.valid
+                        ? "#fca5a5"
+                        : "#cbd5e1",
+                }}
+              />
+
+              {emailStatus.message && (
+                <span
+                  style={{
+                    marginTop:
+                      "-2px",
+                    color:
+                      emailStatus.valid
+                        ? "#15803d"
+                        : "#b91c1c",
+                    fontSize:
+                      "12px",
+                    fontWeight:
+                      500,
+                    lineHeight:
+                      1.5,
+                  }}
+                >
+                  {emailStatus.valid
+                    ? "✓ "
+                    : ""}
+
+                  {
+                    emailStatus.message
+                  }
+                </span>
+              )}
+            </label>
+
+            <div
+              style={{
+                display:
+                  "grid",
+                gridTemplateColumns:
+                  "1fr 1fr",
+                gap:
+                  "14px",
+                marginTop:
+                  "18px",
+              }}
+            >
+              <label
+                style={labelStyle}
+              >
+                Password
+
+                <input
+                  type="password"
+                  required
+                  autoComplete=
+                    "new-password"
+                  value={
+                    password
+                  }
+                  onChange={(event) =>
+                    setPassword(
+                      event.target.value
+                    )
+                  }
+                  placeholder="Create a strong password"
+                  style={
+                    inputStyle
+                  }
+                />
+              </label>
+
+              <label
+                style={labelStyle}
+              >
+                Confirm password
+
+                <input
+                  type="password"
+                  required
+                  autoComplete=
+                    "new-password"
+                  value={
+                    confirmPassword
+                  }
+                  onChange={(event) =>
+                    setConfirmPassword(
+                      event.target.value
+                    )
+                  }
+                  placeholder="Repeat password"
+                  style={{
+                    ...inputStyle,
+                    borderColor:
+                      confirmPassword
+                        ? passwordsMatch
+                          ? "#86efac"
+                          : "#ef4444"
+                        : "#cbd5e1",
+                  }}
+                />
+
+                {passwordMismatch && (
+                  <span
+                    style={{
+                      marginTop:
+                        "-2px",
+                      color:
+                        "#b91c1c",
+                      fontSize:
+                        "12px",
+                      fontWeight:
+                        700,
+                      lineHeight:
+                        1.5,
+                    }}
+                  >
+                    Passwords do not match.
+                  </span>
+                )}
+
+                {passwordsMatch && (
+                  <span
+                    style={{
+                      marginTop:
+                        "-2px",
+                      color:
+                        "#15803d",
+                      fontSize:
+                        "12px",
+                      fontWeight:
+                        600,
+                    }}
+                  >
+                    ✓ Passwords match.
+                  </span>
+                )}
+              </label>
+            </div>
+
+            {password && (
+              <div
+                style={{
+                  marginTop:
+                    "14px",
+                  padding:
+                    "14px",
+                  border:
+                    "1px solid #e2e8f0",
+                  borderRadius:
+                    "10px",
+                  backgroundColor:
+                    "#f8fafc",
+                }}
+              >
+                <div
+                  style={{
+                    marginBottom:
+                      "9px",
+                    color:
+                      "#334155",
+                    fontSize:
+                      "12px",
+                    fontWeight:
+                      800,
+                    textTransform:
+                      "uppercase",
+                    letterSpacing:
+                      "0.04em",
+                  }}
+                >
+                  Password security
+                </div>
+
+                <div
+                  style={{
+                    display:
+                      "grid",
+                    gap:
+                      "6px",
+                  }}
+                >
+                  {passwordRequirements.map(
+                    (
+                      requirement
+                    ) => (
+                      <PasswordRule
+                        key={
+                          requirement.label
+                        }
+                        label={
+                          requirement.label
+                        }
+                        valid={
+                          requirement.valid
+                        }
+                      />
+                    )
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div
+              style={{
+                marginTop:
+                  "22px",
+                padding:
+                  "16px",
+                border:
+                  "1px solid #c7d2fe",
+                borderRadius:
+                  "11px",
+                backgroundColor:
+                  "#f8faff",
+              }}
+            >
+              <div
+                style={{
+                  display:
+                    "flex",
+                  justifyContent:
+                    "space-between",
+                  alignItems:
+                    "flex-start",
+                  gap:
+                    "14px",
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      fontSize:
+                        "12px",
+                      fontWeight:
+                        800,
+                      color:
+                        "#4338ca",
+                      textTransform:
+                        "uppercase",
+                      letterSpacing:
+                        "0.05em",
+                    }}
+                  >
+                    Human Verification
+                  </div>
+
+                  <p
+                    style={{
+                      margin:
+                        "7px 0 0",
+                      color:
+                        "#334155",
+                      fontSize:
+                        "13px",
+                      lineHeight:
+                        1.6,
+                      fontWeight:
+                        600,
+                    }}
+                  >
+                    {challengeLoading
+                      ? "Loading verification challenge..."
+                      : challenge
+                          ?.question ??
+                        "Verification challenge unavailable."}
+                  </p>
+
+                  {challenge && (
+                    <div
+                      style={{
+                        marginTop:
+                          "6px",
+                        color:
+                          "#64748b",
+                        fontSize:
+                          "10px",
+                      }}
+                    >
+                      Challenge type:{" "}
+                      {formatChallengeType(
+                        challenge.challenge_type
+                      )}
+                      {" • "}
+                      expires in{" "}
+                      {Math.round(
+                        challenge.expires_in_seconds /
+                          60
+                      )}{" "}
+                      minutes
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    void loadHumanChallenge()
+                  }
+                  disabled={
+                    challengeLoading
+                  }
+                  style={{
+                    border:
+                      "1px solid #cbd5e1",
+                    borderRadius:
+                      "8px",
+                    padding:
+                      "7px 10px",
+                    backgroundColor:
+                      "#ffffff",
+                    color:
+                      "#475569",
+                    fontSize:
+                      "11px",
+                    fontWeight:
+                      700,
+                    cursor:
+                      challengeLoading
+                        ? "not-allowed"
+                        : "pointer",
+                    opacity:
+                      challengeLoading
+                        ? 0.6
+                        : 1,
+                    whiteSpace:
+                      "nowrap",
+                  }}
+                >
+                  {challengeLoading
+                    ? "Loading..."
+                    : "New challenge"}
+                </button>
+              </div>
+
+              {challengeError && (
+                <div
+                  style={{
+                    marginTop:
+                      "12px",
+                    padding:
+                      "10px 12px",
+                    borderRadius:
+                      "8px",
+                    border:
+                      "1px solid #fecaca",
+                    backgroundColor:
+                      "#fef2f2",
+                    color:
+                      "#991b1b",
+                    fontSize:
+                      "12px",
+                    lineHeight:
+                      1.5,
+                  }}
+                >
+                  {challengeError}
+                </div>
+              )}
+
+              {challengeUsesOptions &&
+                challenge && (
+                  <div
+                    style={{
+                      marginTop:
+                        "14px",
+                      display:
+                        "grid",
+                      gridTemplateColumns:
+                        "repeat(2, minmax(0, 1fr))",
+                      gap:
+                        "9px",
+                    }}
+                  >
+                    {challenge.options.map(
+                      (option) => {
+                        const selected =
+                          humanAnswer ===
+                          option;
+
+                        return (
+                          <button
+                            key={
+                              option
+                            }
+                            type="button"
+                            onClick={() =>
+                              setHumanAnswer(
+                                option
+                              )
+                            }
+                            style={{
+                              padding:
+                                "11px 12px",
+                              borderRadius:
+                                "9px",
+                              border:
+                                selected
+                                  ? "1px solid #4f46e5"
+                                  : "1px solid #cbd5e1",
+                              backgroundColor:
+                                selected
+                                  ? "#eef2ff"
+                                  : "#ffffff",
+                              color:
+                                selected
+                                  ? "#3730a3"
+                                  : "#334155",
+                              fontSize:
+                                challenge.challenge_type ===
+                                "shape_pattern"
+                                  ? "22px"
+                                  : "12px",
+                              fontWeight:
+                                700,
+                              cursor:
+                                "pointer",
+                            }}
+                          >
+                            {selected
+                              ? "✓ "
+                              : ""}
+
+                            {option}
+                          </button>
+                        );
+                      }
+                    )}
+                  </div>
+                )}
+
+              {!challengeUsesOptions &&
+                challenge && (
+                  <input
+                    type="text"
+                    required
+                    autoComplete="off"
+                    value={
+                      humanAnswer
+                    }
+                    onChange={(event) =>
+                      setHumanAnswer(
+                        event.target.value
+                      )
+                    }
+                    placeholder="Enter your answer"
+                    style={{
+                      ...inputStyle,
+                      marginTop:
+                        "13px",
+                    }}
+                  />
+                )}
+            </div>
+
+            <label
+              style={{
+                display:
+                  "flex",
+                alignItems:
+                  "flex-start",
+                gap:
+                  "9px",
+                marginTop:
+                  "18px",
+                color:
+                  "#475569",
+                fontSize:
+                  "13px",
+                lineHeight:
+                  1.55,
+                cursor:
+                  "pointer",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={
+                  acceptTerms
+                }
+                onChange={(event) =>
+                  setAcceptTerms(
+                    event.target.checked
+                  )
+                }
+                style={{
+                  marginTop:
+                    "3px",
+                  width:
+                    "15px",
+                  height:
+                    "15px",
+                  accentColor:
+                    "#2563eb",
+                }}
+              />
+
+              <span>
+                I agree to the
+                TrustGRC AI 360 Terms
+                of Service and Privacy
+                Notice.
+              </span>
+            </label>
+
+            <button
+              type="submit"
+              disabled={
+                isSubmitting ||
+                challengeLoading ||
+                challenge === null
+              }
+              style={{
+                width:
+                  "100%",
+                marginTop:
+                  "24px",
+                padding:
+                  "12px 18px",
+                border:
+                  "none",
+                borderRadius:
+                  "9px",
+                backgroundColor:
+                  isSubmitting ||
+                  challengeLoading ||
+                  challenge === null
+                    ? "#94a3b8"
+                    : "#2563eb",
+                color:
+                  "#ffffff",
+                cursor:
+                  isSubmitting ||
+                  challengeLoading ||
+                  challenge === null
+                    ? "not-allowed"
+                    : "pointer",
+                fontSize:
+                  "15px",
+                fontWeight:
+                  700,
+              }}
+            >
+              {isSubmitting
+                ? "Creating account..."
+                : "Create organisation account"}
+            </button>
+
+            <div
+              style={{
+                marginTop:
+                  "20px",
+                paddingTop:
+                  "18px",
+                borderTop:
+                  "1px solid #e2e8f0",
+                textAlign:
+                  "center",
+                color:
+                  "#64748b",
+                fontSize:
+                  "13px",
+              }}
+            >
+              Already have an
+              account?{" "}
+
+              <Link
+                href="/login"
+                style={{
+                  color:
+                    "#2563eb",
+                  fontWeight:
+                    700,
+                  textDecoration:
+                    "none",
+                }}
+              >
+                Sign in
+              </Link>
+            </div>
+          </form>
+        )}
       </section>
     </main>
   );
@@ -1750,21 +1966,28 @@ function PasswordRule({
     <div
       style={{
         display: "flex",
-        alignItems: "center",
+        alignItems:
+          "center",
         gap: "7px",
         color: valid
           ? "#15803d"
           : "#64748b",
-        fontSize: "11px",
-        lineHeight: 1.45,
+        fontSize:
+          "11px",
+        lineHeight:
+          1.45,
       }}
     >
       <span
         style={{
-          width: "16px",
-          height: "16px",
-          flexShrink: 0,
-          display: "grid",
+          width:
+            "16px",
+          height:
+            "16px",
+          flexShrink:
+            0,
+          display:
+            "grid",
           placeItems:
             "center",
           borderRadius:
@@ -1779,11 +2002,15 @@ function PasswordRule({
           color: valid
             ? "#15803d"
             : "#94a3b8",
-          fontSize: "9px",
-          fontWeight: 800,
+          fontSize:
+            "9px",
+          fontWeight:
+            800,
         }}
       >
-        {valid ? "✓" : "•"}
+        {valid
+          ? "✓"
+          : "•"}
       </span>
 
       {label}
@@ -1825,25 +2052,34 @@ function SecurityPoint({
   return (
     <div
       style={{
-        display: "flex",
-        gap: "10px",
-        alignItems: "center",
-        color: "#dbeafe",
-        fontSize: "14px",
+        display:
+          "flex",
+        gap:
+          "10px",
+        alignItems:
+          "center",
+        color:
+          "#dbeafe",
+        fontSize:
+          "14px",
       }}
     >
       <span
         style={{
-          width: "24px",
-          height: "24px",
+          width:
+            "24px",
+          height:
+            "24px",
           borderRadius:
             "50%",
-          display: "grid",
+          display:
+            "grid",
           placeItems:
             "center",
           backgroundColor:
             "rgba(255,255,255,0.12)",
-          fontWeight: 800,
+          fontWeight:
+            800,
         }}
       >
         ✓
@@ -1874,24 +2110,20 @@ function MessageBox({
           "18px",
         padding:
           "12px 14px",
-
         border: error
           ? "1px solid #fecaca"
           : "1px solid #bbf7d0",
-
         borderRadius:
           "8px",
-
         backgroundColor:
           error
             ? "#fef2f2"
             : "#f0fdf4",
-
         color: error
           ? "#991b1b"
           : "#166534",
-
-        lineHeight: 1.5,
+        lineHeight:
+          1.5,
       }}
     >
       {message}
@@ -1902,29 +2134,39 @@ function MessageBox({
 
 const labelStyle:
   React.CSSProperties = {
-    display: "flex",
+    display:
+      "flex",
     flexDirection:
       "column",
-    gap: "8px",
-    color: "#334155",
-    fontSize: "14px",
-    fontWeight: 600,
+    gap:
+      "8px",
+    color:
+      "#334155",
+    fontSize:
+      "14px",
+    fontWeight:
+      600,
   };
 
 
 const inputStyle:
   React.CSSProperties = {
-    width: "100%",
+    width:
+      "100%",
     boxSizing:
       "border-box",
     padding:
       "11px 12px",
     border:
       "1px solid #cbd5e1",
-    borderRadius: "8px",
+    borderRadius:
+      "8px",
     backgroundColor:
       "#ffffff",
-    color: "#0f172a",
-    fontSize: "15px",
-    outline: "none",
+    color:
+      "#0f172a",
+    fontSize:
+      "15px",
+    outline:
+      "none",
   };

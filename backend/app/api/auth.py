@@ -22,6 +22,17 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.email_service import (
+    EmailDeliveryError,
+    build_verification_url,
+    send_verification_email,
+)
+from app.core.email_verification import (
+    consume_verification_token,
+    create_email_verification_token,
+    get_valid_verification_token,
+    utc_now as verification_utc_now,
+)
 from app.core.password_policy import (
     validate_password_strength,
 )
@@ -43,7 +54,11 @@ from app.schemas.auth import (
     HumanChallengeResponse,
     RegistrationRequest,
     RegistrationResponse,
+    ResendVerificationRequest,
+    ResendVerificationResponse,
     TokenResponse,
+    VerifyEmailRequest,
+    VerifyEmailResponse,
 )
 from app.schemas.user import UserResponse
 
@@ -159,6 +174,11 @@ ODD_ONE_OUT_GROUPS = [
 ]
 
 
+# =========================================================
+# TIME HELPERS
+# =========================================================
+
+
 def utc_now() -> datetime:
     return datetime.now(
         timezone.utc
@@ -176,6 +196,11 @@ def ensure_aware_utc(
     return value.astimezone(
         timezone.utc
     )
+
+
+# =========================================================
+# EMAIL HELPERS
+# =========================================================
 
 
 def normalize_email(
@@ -251,6 +276,11 @@ def validate_business_email(
     return domain
 
 
+# =========================================================
+# HUMAN VERIFICATION HELPERS
+# =========================================================
+
+
 def normalize_human_answer(
     answer: str,
 ) -> str:
@@ -285,6 +315,11 @@ def hash_challenge_answer(
         message,
         hashlib.sha256,
     ).hexdigest()
+
+
+# =========================================================
+# HUMAN CHALLENGE GENERATORS
+# =========================================================
 
 
 def generate_arithmetic_challenge(
@@ -360,6 +395,7 @@ def generate_number_pattern_challenge(
             1,
             10,
         )
+
         step = random.randint(
             2,
             7,
@@ -514,7 +550,9 @@ def generate_shape_pattern_challenge(
         *distractors,
     ]
 
-    random.shuffle(options)
+    random.shuffle(
+        options
+    )
 
     question = (
         "Which shape comes next? "
@@ -550,7 +588,9 @@ def generate_odd_one_out_challenge(
         odd_item,
     ]
 
-    random.shuffle(options)
+    random.shuffle(
+        options
+    )
 
     question = (
         "Which item does not "
@@ -632,6 +672,11 @@ def generate_human_challenge(
     )
 
 
+# =========================================================
+# AUTHENTICATION HELPERS
+# =========================================================
+
+
 def authenticate_user(
     db: Session,
     email: str,
@@ -681,6 +726,7 @@ def find_existing_organization_by_domain(
                     organization.contact_email
                 )
             )
+
         except HTTPException:
             continue
 
@@ -702,6 +748,7 @@ def find_existing_organization_by_domain(
                     user.email
                 )
             )
+
         except HTTPException:
             continue
 
@@ -712,6 +759,11 @@ def find_existing_organization_by_domain(
             return user.organization
 
     return None
+
+
+# =========================================================
+# HUMAN CHALLENGE ENDPOINT
+# =========================================================
 
 
 @router.get(
@@ -753,15 +805,21 @@ def create_human_challenge(
         )
     )
 
-    db.add(challenge)
+    db.add(
+        challenge
+    )
+
     db.commit()
 
     return HumanChallengeResponse(
-        challenge_id=challenge_id,
+        challenge_id=
+            challenge_id,
         challenge_type=
             challenge_type,
-        question=question,
-        options=options,
+        question=
+            question,
+        options=
+            options,
         expires_in_seconds=(
             CHALLENGE_EXPIRY_MINUTES
             * 60
@@ -811,6 +869,7 @@ def verify_and_consume_challenge(
 
     if utc_now() > expires_at:
         challenge.used_at = utc_now()
+
         db.commit()
 
         raise HTTPException(
@@ -851,10 +910,17 @@ def verify_and_consume_challenge(
         )
 
 
+# =========================================================
+# REGISTRATION
+# =========================================================
+
+
 @router.post(
     "/register",
-    response_model=RegistrationResponse,
-    status_code=status.HTTP_201_CREATED,
+    response_model=
+        RegistrationResponse,
+    status_code=
+        status.HTTP_201_CREATED,
 )
 def register(
     payload: RegistrationRequest,
@@ -872,13 +938,18 @@ def register(
     # 1. Validate password policy
     # -----------------------------------------------------
 
-    password_errors = validate_password_strength(
-        payload.password,
-        email=normalized_email,
-        first_name=payload.first_name,
-        last_name=payload.last_name,
-        organisation_name=
-            payload.organisation_name,
+    password_errors = (
+        validate_password_strength(
+            payload.password,
+            email=
+                normalized_email,
+            first_name=
+                payload.first_name,
+            last_name=
+                payload.last_name,
+            organisation_name=
+                payload.organisation_name,
+        )
     )
 
     if password_errors:
@@ -891,7 +962,7 @@ def register(
         )
 
     # -----------------------------------------------------
-    # 2. Check whether this email already has an account
+    # 2. Prevent duplicate email accounts
     # -----------------------------------------------------
 
     existing_user = db.scalar(
@@ -935,7 +1006,7 @@ def register(
         )
 
     # -----------------------------------------------------
-    # 4. Verify and consume the single-use human challenge
+    # 4. Human verification
     # -----------------------------------------------------
 
     verify_and_consume_challenge(
@@ -947,7 +1018,7 @@ def register(
     )
 
     # -----------------------------------------------------
-    # 5. Prepare organisation and administrator
+    # 5. Prepare organisation
     # -----------------------------------------------------
 
     full_name = (
@@ -962,13 +1033,16 @@ def register(
             payload.organisation_name.strip(),
         contact_email=
             normalized_email,
-        status="active",
+        status=
+            "active",
     )
 
-    db.add(organization)
+    db.add(
+        organization
+    )
 
     # -----------------------------------------------------
-    # 6. Create organisation + first administrator
+    # 6. Create organisation + administrator + token
     # -----------------------------------------------------
 
     try:
@@ -977,6 +1051,10 @@ def register(
         user = User(
             email=
                 normalized_email,
+            email_verified=
+                False,
+            email_verified_at=
+                None,
             full_name=
                 full_name,
             password_hash=
@@ -987,35 +1065,286 @@ def register(
                 "organization_admin",
             organization_id=
                 organization.id,
-            is_active=True,
+            is_active=
+                True,
         )
 
-        db.add(user)
+        db.add(
+            user
+        )
+
+        db.flush()
+
+        raw_verification_token = (
+            create_email_verification_token(
+                db=db,
+                user_id=user.id,
+            )
+        )
+
         db.commit()
 
-        db.refresh(organization)
-        db.refresh(user)
+        db.refresh(
+            organization
+        )
+
+        db.refresh(
+            user
+        )
 
     except Exception:
         db.rollback()
         raise
 
+    # -----------------------------------------------------
+    # 7. Build verification URL
+    # -----------------------------------------------------
+
+    verification_url = (
+        build_verification_url(
+            raw_verification_token
+        )
+    )
+
+    # -----------------------------------------------------
+    # 8. Send verification email when enabled
+    # -----------------------------------------------------
+
+    if settings.EMAIL_ENABLED:
+        try:
+            send_verification_email(
+                recipient_email=
+                    user.email,
+                recipient_name=
+                    user.full_name,
+                raw_token=
+                    raw_verification_token,
+            )
+
+        except EmailDeliveryError as exc:
+            raise HTTPException(
+                status_code=
+                    status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=(
+                    "Your account was created, but "
+                    "the verification email could "
+                    "not be delivered. Please use "
+                    "the resend verification option."
+                ),
+            ) from exc
+
+    # -----------------------------------------------------
+    # 9. Registration response
+    # -----------------------------------------------------
+
     return RegistrationResponse(
-        status="registered",
+        status=
+            "verification_required",
         message=(
             "Organisation account created "
-            "successfully."
+            "successfully. Please verify your "
+            "work email address before signing in."
         ),
         organization_id=
             organization.id,
         user_id=
             user.id,
+
+        # Development only.
+        # Hide the raw URL when real email
+        # delivery is enabled.
+        verification_url=(
+            None
+            if settings.EMAIL_ENABLED
+            else verification_url
+        ),
     )
+
+
+# =========================================================
+# VERIFY EMAIL
+# =========================================================
+
+
+@router.post(
+    "/verify-email",
+    response_model=
+        VerifyEmailResponse,
+)
+def verify_email(
+    payload: VerifyEmailRequest,
+    db: Session = Depends(get_db),
+) -> VerifyEmailResponse:
+    token_record = (
+        get_valid_verification_token(
+            db=db,
+            raw_token=
+                payload.token,
+        )
+    )
+
+    if token_record is None:
+        raise HTTPException(
+            status_code=
+                status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "The email verification link "
+                "is invalid, expired, or has "
+                "already been used."
+            ),
+        )
+
+    user = db.get(
+        User,
+        token_record.user_id,
+    )
+
+    if user is None:
+        raise HTTPException(
+            status_code=
+                status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "The email verification link "
+                "is invalid."
+            ),
+        )
+
+    if user.email_verified:
+        consume_verification_token(
+            token_record
+        )
+
+        db.commit()
+
+        return VerifyEmailResponse(
+            status=
+                "already_verified",
+            message=(
+                "This email address has "
+                "already been verified."
+            ),
+        )
+
+    user.email_verified = True
+
+    user.email_verified_at = (
+        verification_utc_now()
+    )
+
+    consume_verification_token(
+        token_record
+    )
+
+    db.commit()
+
+    return VerifyEmailResponse(
+        status=
+            "verified",
+        message=(
+            "Your work email address has been "
+            "verified successfully. You can "
+            "now sign in."
+        ),
+    )
+
+
+# =========================================================
+# RESEND VERIFICATION
+# =========================================================
+
+
+@router.post(
+    "/resend-verification",
+    response_model=
+        ResendVerificationResponse,
+)
+def resend_verification(
+    payload: ResendVerificationRequest,
+    db: Session = Depends(get_db),
+) -> ResendVerificationResponse:
+    normalized_email = normalize_email(
+        str(payload.email)
+    )
+
+    generic_message = (
+        "If an eligible unverified account "
+        "exists for this email address, a new "
+        "verification link has been generated."
+    )
+
+    user = db.scalar(
+        select(User).where(
+            User.email ==
+            normalized_email
+        )
+    )
+
+    # Generic response prevents account enumeration.
+    if (
+        user is None
+        or not user.is_active
+        or user.email_verified
+    ):
+        return ResendVerificationResponse(
+            status=
+                "accepted",
+            message=
+                generic_message,
+        )
+
+    try:
+        raw_verification_token = (
+            create_email_verification_token(
+                db=db,
+                user_id=user.id,
+            )
+        )
+
+        db.commit()
+
+    except Exception:
+        db.rollback()
+        raise
+
+    if settings.EMAIL_ENABLED:
+        try:
+            send_verification_email(
+                recipient_email=
+                    user.email,
+                recipient_name=
+                    user.full_name,
+                raw_token=
+                    raw_verification_token,
+            )
+
+        except EmailDeliveryError as exc:
+            raise HTTPException(
+                status_code=
+                    status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=(
+                    "The verification email "
+                    "could not be delivered. "
+                    "Please try again later."
+                ),
+            ) from exc
+
+    return ResendVerificationResponse(
+        status=
+            "accepted",
+        message=
+            generic_message,
+    )
+
+
+# =========================================================
+# LOGIN
+# =========================================================
 
 
 @router.post(
     "/login",
-    response_model=TokenResponse,
+    response_model=
+        TokenResponse,
 )
 def login(
     form_data:
@@ -1044,20 +1373,38 @@ def login(
             },
         )
 
+    if not user.email_verified:
+        raise HTTPException(
+            status_code=
+                status.HTTP_403_FORBIDDEN,
+            detail=(
+                "Please verify your work email "
+                "address before signing in."
+            ),
+        )
+
     access_token = (
         create_access_token(
-            subject=str(user.id)
+            subject=
+                str(user.id)
         )
     )
 
     return TokenResponse(
-        access_token=access_token,
+        access_token=
+            access_token,
     )
+
+
+# =========================================================
+# CURRENT USER
+# =========================================================
 
 
 @router.get(
     "/me",
-    response_model=UserResponse,
+    response_model=
+        UserResponse,
 )
 def read_current_user(
     current_user: User = Depends(

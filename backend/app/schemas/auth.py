@@ -25,9 +25,11 @@ class HumanChallengeResponse(BaseModel):
     challenge_id: str
     challenge_type: ChallengeType
     question: str
+
     options: list[str] = Field(
         default_factory=list
     )
+
     expires_in_seconds: int
 
 
@@ -70,3 +72,33 @@ class RegistrationResponse(BaseModel):
     message: str
     organization_id: int
     user_id: int
+
+    # Development/testing only.
+    # Remove this when real email delivery is enabled.
+    verification_url: str | None = None
+
+
+# ---------------------------------------------------------
+# EMAIL VERIFICATION
+# ---------------------------------------------------------
+
+
+class VerifyEmailRequest(BaseModel):
+    token: str = Field(
+        min_length=20,
+        max_length=500,
+    )
+
+
+class VerifyEmailResponse(BaseModel):
+    status: str
+    message: str
+
+
+class ResendVerificationRequest(BaseModel):
+    email: EmailStr
+
+
+class ResendVerificationResponse(BaseModel):
+    status: str
+    message: str
