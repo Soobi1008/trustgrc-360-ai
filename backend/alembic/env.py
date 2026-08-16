@@ -7,6 +7,8 @@ from sqlalchemy import pool
 from app.core.config import settings
 from app.db.base import Base
 
+from app.models import password_reset_token
+
 # ---------------------------------------------------------
 # TRUSTGRC MODEL REGISTRATION
 # ---------------------------------------------------------

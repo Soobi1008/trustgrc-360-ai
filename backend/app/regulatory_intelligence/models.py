@@ -1,9 +1,21 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Integer, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
+from sqlalchemy.orm import (
+    Mapped,
+    mapped_column,
+    relationship,
+)
 
 from app.db.base import Base
+from app.models.user import User
 
 
 class RegulatorySource(Base):
@@ -93,6 +105,24 @@ class RegulatorySource(Base):
         onupdate=datetime.utcnow,
     )
 
+    snapshots: Mapped[
+        list["RegulatorySnapshot"]
+    ] = relationship(
+        "RegulatorySnapshot",
+        back_populates="source",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+    changes: Mapped[
+        list["RegulatoryChange"]
+    ] = relationship(
+        "RegulatoryChange",
+        back_populates="source",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
 
 class RegulatoryChange(Base):
     __tablename__ = "regulatory_changes"
@@ -104,8 +134,12 @@ class RegulatoryChange(Base):
     )
 
     source_id: Mapped[int] = mapped_column(
-        Integer,
+        ForeignKey(
+            "regulatory_sources.id",
+            ondelete="CASCADE",
+        ),
         index=True,
+        nullable=False,
     )
 
     old_hash: Mapped[str | None] = mapped_column(
@@ -117,19 +151,13 @@ class RegulatoryChange(Base):
         String(128),
     )
 
+    # -----------------------------------------------------
+    # TECHNICAL CHANGE CLASSIFICATION
+    # -----------------------------------------------------
+
     change_type: Mapped[str] = mapped_column(
         String(100),
         default="unclassified",
-    )
-
-    review_status: Mapped[str] = mapped_column(
-        String(50),
-        default="pending_review",
-    )
-
-    impact_status: Mapped[str] = mapped_column(
-        String(50),
-        default="not_analysed",
     )
 
     summary: Mapped[str | None] = mapped_column(
@@ -137,14 +165,109 @@ class RegulatoryChange(Base):
         nullable=True,
     )
 
+    # -----------------------------------------------------
+    # REVIEW WORKFLOW
+    # -----------------------------------------------------
+
+    review_status: Mapped[str] = mapped_column(
+        String(50),
+        default="pending_review",
+        index=True,
+    )
+
+    review_decision: Mapped[
+        str | None
+    ] = mapped_column(
+        String(50),
+        nullable=True,
+        index=True,
+    )
+
+    review_notes: Mapped[
+        str | None
+    ] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    reviewed_by_user_id: Mapped[
+        int | None
+    ] = mapped_column(
+        ForeignKey(
+            "users.id",
+            ondelete="SET NULL",
+        ),
+        nullable=True,
+        index=True,
+    )
+
+    reviewed_at: Mapped[
+        datetime | None
+    ] = mapped_column(
+        DateTime,
+        nullable=True,
+    )
+
+    # -----------------------------------------------------
+    # IMPACT ANALYSIS
+    # -----------------------------------------------------
+
+    impact_status: Mapped[str] = mapped_column(
+        String(50),
+        default="not_analysed",
+        index=True,
+    )
+
+    impact_level: Mapped[
+        str | None
+    ] = mapped_column(
+        String(50),
+        nullable=True,
+        index=True,
+    )
+
+    impact_summary: Mapped[
+        str | None
+    ] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    # -----------------------------------------------------
+    # PUBLICATION / LIFECYCLE
+    # -----------------------------------------------------
+
+    published_at: Mapped[
+        datetime | None
+    ] = mapped_column(
+        DateTime,
+        nullable=True,
+    )
+
     detected_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=datetime.utcnow,
+        index=True,
     )
 
-    reviewed_at: Mapped[datetime | None] = mapped_column(
-        DateTime,
-        nullable=True,
+    # -----------------------------------------------------
+    # RELATIONSHIPS
+    # -----------------------------------------------------
+
+    source: Mapped[
+        "RegulatorySource"
+    ] = relationship(
+        "RegulatorySource",
+        back_populates="changes",
+    )
+
+    reviewed_by: Mapped[
+        "User | None"
+    ] = relationship(
+        "User",
+        foreign_keys=[
+            reviewed_by_user_id
+        ],
     )
 
 
@@ -158,8 +281,12 @@ class RegulatorySnapshot(Base):
     )
 
     source_id: Mapped[int] = mapped_column(
-        Integer,
+        ForeignKey(
+            "regulatory_sources.id",
+            ondelete="CASCADE",
+        ),
         index=True,
+        nullable=False,
     )
 
     content_hash: Mapped[str] = mapped_column(
@@ -180,4 +307,11 @@ class RegulatorySnapshot(Base):
         DateTime,
         default=datetime.utcnow,
         index=True,
+    )
+
+    source: Mapped[
+        "RegulatorySource"
+    ] = relationship(
+        "RegulatorySource",
+        back_populates="snapshots",
     )

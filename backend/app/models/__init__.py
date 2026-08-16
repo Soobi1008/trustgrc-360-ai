@@ -35,6 +35,10 @@ from app.models.organization_data_category import (
     OrganizationDataCategory,
 )
 
+from app.models.password_reset_token import (
+    PasswordResetToken,
+)
+
 __all__ = [
     "Organization",
     "AISystem",

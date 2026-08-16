@@ -102,3 +102,34 @@ class ResendVerificationRequest(BaseModel):
 class ResendVerificationResponse(BaseModel):
     status: str
     message: str
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ForgotPasswordResponse(BaseModel):
+    status: str
+    message: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(
+        min_length=20,
+        max_length=200,
+    )
+
+    new_password: str = Field(
+        min_length=12,
+        max_length=128,
+    )
+
+    confirm_password: str = Field(
+        min_length=12,
+        max_length=128,
+    )
+
+
+class ResetPasswordResponse(BaseModel):
+    status: str
+    message: str

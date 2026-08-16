@@ -1,8 +1,24 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+
+import {
+  clearAuthentication,
+} from "../../../lib/auth";
+
 
 export default function CompanyDashboard() {
+  const router = useRouter();
+
+  function handleSignOut() {
+    clearAuthentication();
+
+    router.replace(
+      "/login"
+    );
+  }
+
   return (
     <main
       style={{
@@ -18,88 +34,156 @@ export default function CompanyDashboard() {
           margin: "0 auto",
         }}
       >
+        {/* HEADER */}
+
         <div
           style={{
             marginBottom: "32px",
+
+            display: "flex",
+
+            alignItems: "flex-start",
+
+            justifyContent:
+              "space-between",
+
+            gap: "24px",
           }}
         >
-          <p
-            style={{
-              margin: 0,
-              color: "#2563eb",
-              fontSize: "13px",
-              fontWeight: 800,
-              letterSpacing: "0.08em",
-            }}
-          >
-            TRUSTGRC AI 360
-          </p>
+          <div>
+            <p
+              style={{
+                margin: 0,
+                color: "#2563eb",
+                fontSize: "13px",
+                fontWeight: 800,
+                letterSpacing: "0.08em",
+              }}
+            >
+              TRUSTGRC AI 360
+            </p>
 
-          <h1
-            style={{
-              marginTop: "10px",
-              marginBottom: "8px",
-              color: "#0f172a",
-              fontSize: "36px",
-              lineHeight: 1.2,
-            }}
-          >
-            Organization Dashboard
-          </h1>
+            <h1
+              style={{
+                marginTop: "10px",
+                marginBottom: "8px",
+                color: "#0f172a",
+                fontSize: "36px",
+                lineHeight: 1.2,
+              }}
+            >
+              Organisation Dashboard
+            </h1>
 
-          <p
+            <p
+              style={{
+                margin: 0,
+                color: "#64748b",
+                fontSize: "16px",
+                lineHeight: 1.6,
+              }}
+            >
+              Welcome to your Governance,
+              Risk and Compliance portal.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={
+              handleSignOut
+            }
             style={{
-              margin: 0,
-              color: "#64748b",
-              fontSize: "16px",
-              lineHeight: 1.6,
+              padding:
+                "10px 16px",
+
+              border:
+                "1px solid #cbd5e1",
+
+              borderRadius:
+                "9px",
+
+              backgroundColor:
+                "#ffffff",
+
+              color:
+                "#334155",
+
+              cursor:
+                "pointer",
+
+              fontSize:
+                "13px",
+
+              fontWeight:
+                700,
+
+              boxShadow:
+                "0 4px 12px rgba(15, 23, 42, 0.05)",
             }}
           >
-            Welcome to your Governance, Risk and Compliance portal.
-          </p>
+            Sign Out
+          </button>
         </div>
+
+
+        {/* DASHBOARD CARDS */}
 
         <section
           style={{
             display: "grid",
+
             gridTemplateColumns:
               "repeat(auto-fit, minmax(220px, 1fr))",
+
             gap: "18px",
           }}
         >
           <DashboardCard
             title="AI Inventory"
-            description="Register and manage the AI systems used by your organisation."
+            description={
+              "Register and manage the AI systems used by your organisation."
+            }
             href="/inventory"
           />
 
           <DashboardCard
             title="Assessments"
-            description="Run governance, privacy, regulatory and AI-risk assessments."
+            description={
+              "Run governance, privacy, regulatory and AI-risk assessments."
+            }
             href="/assessments"
           />
 
           <DashboardCard
             title="Generated Risks"
-            description="Review risks identified through assessments and AI-system analysis."
+            description={
+              "Review risks identified through assessments and AI-system analysis."
+            }
             href="/generated-risks"
           />
 
           <DashboardCard
             title="Policies"
-            description="Manage AI governance, compliance and internal policy requirements."
+            description={
+              "Manage AI governance, compliance and internal policy requirements."
+            }
             href="#"
           />
 
           <DashboardCard
             title="Reports"
-            description="Review and export governance, risk and compliance reporting."
+            description={
+              "Review and export governance, risk and compliance reporting."
+            }
             href="#"
           />
 
           <DashboardCard
             title="Regulatory Library"
-            description="Review applicable regulations, standards and regulatory obligations."
+            description={
+              "Review applicable regulations, standards and regulatory obligations."
+            }
             href="/platform/regulatory-library"
           />
         </section>
@@ -107,6 +191,7 @@ export default function CompanyDashboard() {
     </main>
   );
 }
+
 
 function DashboardCard({
   title,
@@ -122,9 +207,11 @@ function DashboardCard({
       style={{
         height: "100%",
         padding: "22px",
-        border: "1px solid #e2e8f0",
+        border:
+          "1px solid #e2e8f0",
         borderRadius: "14px",
-        backgroundColor: "#ffffff",
+        backgroundColor:
+          "#ffffff",
         boxShadow:
           "0 8px 24px rgba(15, 23, 42, 0.06)",
       }}
@@ -132,9 +219,12 @@ function DashboardCard({
       <h2
         style={{
           marginTop: 0,
-          marginBottom: "10px",
-          color: "#0f172a",
-          fontSize: "20px",
+          marginBottom:
+            "10px",
+          color:
+            "#0f172a",
+          fontSize:
+            "20px",
         }}
       >
         {title}
@@ -143,9 +233,12 @@ function DashboardCard({
       <p
         style={{
           margin: 0,
-          color: "#64748b",
-          fontSize: "14px",
-          lineHeight: 1.6,
+          color:
+            "#64748b",
+          fontSize:
+            "14px",
+          lineHeight:
+            1.6,
         }}
       >
         {description}
@@ -153,10 +246,14 @@ function DashboardCard({
 
       <div
         style={{
-          marginTop: "18px",
-          color: "#2563eb",
-          fontSize: "13px",
-          fontWeight: 700,
+          marginTop:
+            "18px",
+          color:
+            "#2563eb",
+          fontSize:
+            "13px",
+          fontWeight:
+            700,
         }}
       >
         Open →
@@ -168,8 +265,10 @@ function DashboardCard({
     return (
       <div
         style={{
-          opacity: 0.7,
-          cursor: "not-allowed",
+          opacity:
+            0.7,
+          cursor:
+            "not-allowed",
         }}
       >
         {card}
@@ -181,8 +280,10 @@ function DashboardCard({
     <Link
       href={href}
       style={{
-        textDecoration: "none",
-        color: "inherit",
+        textDecoration:
+          "none",
+        color:
+          "inherit",
       }}
     >
       {card}

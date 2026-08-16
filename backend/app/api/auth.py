@@ -22,45 +22,71 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+
 from app.core.email_service import (
     EmailDeliveryError,
     build_verification_url,
+    send_password_reset_email,
     send_verification_email,
 )
+
 from app.core.email_verification import (
     consume_verification_token,
     create_email_verification_token,
     get_valid_verification_token,
     utc_now as verification_utc_now,
 )
+
 from app.core.password_policy import (
     validate_password_strength,
 )
+
+from app.core.password_reset import (
+    consume_password_reset_token,
+    create_password_reset_token,
+    get_valid_password_reset_token,
+)
+
 from app.core.security import (
     create_access_token,
     hash_password,
     verify_password,
 )
+
 from app.db.session import get_db
+
 from app.dependencies.auth import (
     get_current_user,
 )
+
 from app.models.human_verification_challenge import (
     HumanVerificationChallenge,
 )
-from app.models.organization import Organization
+
+from app.models.organization import (
+    Organization,
+)
+
 from app.models.user import User
+
 from app.schemas.auth import (
+    ForgotPasswordRequest,
+    ForgotPasswordResponse,
     HumanChallengeResponse,
     RegistrationRequest,
     RegistrationResponse,
     ResendVerificationRequest,
     ResendVerificationResponse,
+    ResetPasswordRequest,
+    ResetPasswordResponse,
     TokenResponse,
     VerifyEmailRequest,
     VerifyEmailResponse,
 )
-from app.schemas.user import UserResponse
+
+from app.schemas.user import (
+    UserResponse,
+)
 
 
 router = APIRouter(
@@ -1333,6 +1359,180 @@ def resend_verification(
             "accepted",
         message=
             generic_message,
+    )
+
+
+@router.post(
+    "/forgot-password",
+    response_model=ForgotPasswordResponse,
+)
+def forgot_password(
+    payload: ForgotPasswordRequest,
+    db: Session = Depends(get_db),
+) -> ForgotPasswordResponse:
+    normalized_email = normalize_email(
+        str(payload.email)
+    )
+
+    generic_message = (
+        "If an eligible account exists for this email address, "
+        "a password-reset email has been sent."
+    )
+
+    user = db.scalar(
+        select(User).where(
+            User.email == normalized_email
+        )
+    )
+
+    # Do not reveal whether the account exists.
+    if (
+        user is None
+        or not user.is_active
+        or not user.email_verified
+    ):
+        return ForgotPasswordResponse(
+            status="accepted",
+            message=generic_message,
+        )
+
+    try:
+        raw_reset_token = (
+            create_password_reset_token(
+                db=db,
+                user_id=user.id,
+            )
+        )
+
+        db.commit()
+
+    except Exception:
+        db.rollback()
+        raise
+
+    if settings.EMAIL_ENABLED:
+        try:
+            send_password_reset_email(
+                recipient_email=user.email,
+                recipient_name=user.full_name,
+                raw_token=raw_reset_token,
+            )
+
+        except EmailDeliveryError as exc:
+            raise HTTPException(
+                status_code=
+                    status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=(
+                    "The password-reset email "
+                    "could not be delivered. "
+                    "Please try again later."
+                ),
+            ) from exc
+
+    return ForgotPasswordResponse(
+        status="accepted",
+        message=generic_message,
+    )
+
+
+@router.post(
+    "/reset-password",
+    response_model=ResetPasswordResponse,
+)
+def reset_password(
+    payload: ResetPasswordRequest,
+    db: Session = Depends(get_db),
+) -> ResetPasswordResponse:
+    if (
+        payload.new_password
+        != payload.confirm_password
+    ):
+        raise HTTPException(
+            status_code=
+                status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "The new passwords do not match."
+            ),
+        )
+
+    token_record = (
+        get_valid_password_reset_token(
+            db=db,
+            raw_token=payload.token,
+        )
+    )
+
+    if token_record is None:
+        raise HTTPException(
+            status_code=
+                status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "The password-reset link "
+                "is invalid, expired, or "
+                "has already been used."
+            ),
+        )
+
+    user = db.get(
+        User,
+        token_record.user_id,
+    )
+
+    if (
+        user is None
+        or not user.is_active
+    ):
+        raise HTTPException(
+            status_code=
+                status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "The password-reset link "
+                "is invalid."
+            ),
+        )
+
+    password_errors = (
+        validate_password_strength(
+            payload.new_password,
+            email=user.email,
+            first_name="",
+            last_name="",
+            organisation_name=(
+                user.organization.name
+                if user.organization
+                else ""
+            ),
+        )
+    )
+
+    if password_errors:
+        raise HTTPException(
+            status_code=
+                status.HTTP_400_BAD_REQUEST,
+            detail=" ".join(
+                password_errors
+            ),
+        )
+
+    user.password_hash = (
+        hash_password(
+            payload.new_password
+        )
+    )
+
+    consume_password_reset_token(
+        token_record
+    )
+
+    db.commit()
+
+    return ResetPasswordResponse(
+        status="password_reset",
+        message=(
+            "Your password has been reset "
+            "successfully. You can now sign in "
+            "with your new password."
+        ),
     )
 
 

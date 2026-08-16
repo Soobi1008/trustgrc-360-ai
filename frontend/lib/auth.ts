@@ -11,6 +11,19 @@ export type AuthUser = {
 const TOKEN_KEY = "trustgrc_access_token";
 const USER_KEY = "trustgrc_user";
 
+/*
+ * Authentication is intentionally stored in sessionStorage.
+ *
+ * Unlike localStorage, sessionStorage does not persist indefinitely
+ * across browser sessions.
+ *
+ * IMPORTANT:
+ * Browser storage is only a convenience for the frontend.
+ * It must never be treated as the authoritative source for
+ * permissions. The backend remains responsible for validating
+ * authentication and authorization.
+ */
+
 export function saveAuthentication(
   token: string,
   user: AuthUser
@@ -19,8 +32,23 @@ export function saveAuthentication(
     return;
   }
 
-  localStorage.setItem(TOKEN_KEY, token);
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  /*
+   * Remove legacy persistent authentication.
+   * This prevents an older localStorage token from continuing
+   * to authenticate an administrator after this migration.
+   */
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
+
+  sessionStorage.setItem(
+    TOKEN_KEY,
+    token
+  );
+
+  sessionStorage.setItem(
+    USER_KEY,
+    JSON.stringify(user)
+  );
 }
 
 export function getAccessToken(): string | null {
@@ -28,7 +56,9 @@ export function getAccessToken(): string | null {
     return null;
   }
 
-  return localStorage.getItem(TOKEN_KEY);
+  return sessionStorage.getItem(
+    TOKEN_KEY
+  );
 }
 
 export function getStoredUser(): AuthUser | null {
@@ -36,14 +66,19 @@ export function getStoredUser(): AuthUser | null {
     return null;
   }
 
-  const storedUser = localStorage.getItem(USER_KEY);
+  const storedUser =
+    sessionStorage.getItem(
+      USER_KEY
+    );
 
   if (!storedUser) {
     return null;
   }
 
   try {
-    return JSON.parse(storedUser) as AuthUser;
+    return JSON.parse(
+      storedUser
+    ) as AuthUser;
   } catch {
     clearAuthentication();
     return null;
@@ -55,18 +90,38 @@ export function clearAuthentication() {
     return;
   }
 
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(USER_KEY);
+  /*
+   * Clear both stores during the migration period.
+   */
+  sessionStorage.removeItem(
+    TOKEN_KEY
+  );
+
+  sessionStorage.removeItem(
+    USER_KEY
+  );
+
+  localStorage.removeItem(
+    TOKEN_KEY
+  );
+
+  localStorage.removeItem(
+    USER_KEY
+  );
 }
 
-export function isPlatformRole(role: string) {
+export function isPlatformRole(
+  role: string
+) {
   return [
     "super_admin",
     "platform_admin",
   ].includes(role);
 }
 
-export function isCompanyRole(role: string) {
+export function isCompanyRole(
+  role: string
+) {
   return [
     "organization_admin",
     "compliance_officer",

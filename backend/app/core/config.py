@@ -57,6 +57,8 @@ class Settings(BaseSettings):
 
     EMAIL_VERIFICATION_EXPIRY_MINUTES: int = 30
 
+    PASSWORD_RESET_EXPIRY_MINUTES: int = 30
+    
     EMAIL_ENABLED: bool = False
 
     # -----------------------------------------------------
