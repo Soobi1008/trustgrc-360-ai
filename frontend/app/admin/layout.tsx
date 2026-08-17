@@ -41,6 +41,10 @@ const menuItems = [
     href: "/admin/frameworks",
   },
   {
+  label: "Regulatory Intelligence",
+  href: "/admin/regulatory-intelligence",
+  },
+  {
     label: "Risk Library",
     href: "/admin/risk-library",
   },

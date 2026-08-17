@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy import (
     Boolean,
     DateTime,
+    Float,
     ForeignKey,
     Integer,
     String,
@@ -150,6 +151,50 @@ class RegulatoryChange(Base):
     new_hash: Mapped[str] = mapped_column(
         String(128),
     )
+
+    previous_snapshot_id: Mapped[
+        int | None
+    ] = mapped_column(
+        ForeignKey(
+            "regulatory_snapshots.id",
+            ondelete="SET NULL",
+        ),
+        nullable=True,
+        index=True,
+    )
+
+    new_snapshot_id: Mapped[
+        int | None
+    ] = mapped_column(
+        ForeignKey(
+            "regulatory_snapshots.id",
+            ondelete="SET NULL",
+        ),
+        nullable=True,
+        index=True,
+    )
+
+    technical_severity: Mapped[
+        str | None
+    ] = mapped_column(
+        String(50),
+        nullable=True,
+        index=True,
+    )
+
+    difference_ratio: Mapped[
+        float | None
+    ] = mapped_column(
+        Float,
+        nullable=True,
+    )
+
+    evidence_status: Mapped[str] = mapped_column(
+        String(50),
+        default="captured",
+        index=True,
+    )
+
 
     # -----------------------------------------------------
     # TECHNICAL CHANGE CLASSIFICATION
@@ -302,6 +347,49 @@ class RegulatorySnapshot(Base):
         String(50),
         default="monitoring",
     )
+
+
+    source_url: Mapped[
+        str | None
+    ] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    retrieval_status: Mapped[str] = mapped_column(
+        String(50),
+        default="ok",
+        index=True,
+    )
+
+    content_type: Mapped[
+        str | None
+    ] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+
+    authoritative_identifier: Mapped[
+        str | None
+    ] = mapped_column(
+        String(100),
+        nullable=True,
+        index=True,
+    )
+
+    authoritative_version: Mapped[
+        str | None
+    ] = mapped_column(
+        String(100),
+        nullable=True,
+    )
+
+    retrieved_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        index=True,
+    )
+
 
     captured_at: Mapped[datetime] = mapped_column(
         DateTime,

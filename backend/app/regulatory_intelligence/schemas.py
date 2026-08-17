@@ -7,6 +7,7 @@ from pydantic import (
     field_validator,
 )
 
+
 # =========================================================
 # REGULATORY SOURCE SCHEMAS
 # =========================================================
@@ -52,25 +53,50 @@ class RegulatoryChangeResponse(BaseModel):
     old_hash: str | None = None
     new_hash: str
 
+    # -----------------------------------------------------
+    # EVIDENCE / PROVENANCE
+    # -----------------------------------------------------
+
+    previous_snapshot_id: int | None = None
+    new_snapshot_id: int | None = None
+
+    technical_severity: str | None = None
+    difference_ratio: float | None = None
+
+    evidence_status: str
+
+    # -----------------------------------------------------
+    # TECHNICAL CHANGE CLASSIFICATION
+    # -----------------------------------------------------
+
     change_type: str
 
-    # Review workflow
+    summary: str | None = None
+    detected_at: datetime
+
+    # -----------------------------------------------------
+    # REVIEW WORKFLOW
+    # -----------------------------------------------------
+
     review_status: str
     review_decision: str | None = None
     review_notes: str | None = None
+
     reviewed_by_user_id: int | None = None
     reviewed_at: datetime | None = None
 
-    # Impact analysis
+    # -----------------------------------------------------
+    # IMPACT ANALYSIS
+    # -----------------------------------------------------
+
     impact_status: str
     impact_level: str | None = None
     impact_summary: str | None = None
 
-    # Detection information
-    summary: str | None = None
-    detected_at: datetime
+    # -----------------------------------------------------
+    # PUBLICATION
+    # -----------------------------------------------------
 
-    # Publication
     published_at: datetime | None = None
 
     model_config = {
@@ -85,13 +111,62 @@ class RegulatoryChangeResponse(BaseModel):
 class RegulatorySnapshotResponse(BaseModel):
     id: int
     source_id: int
+
     content_hash: str
+    normalized_content: str
+
     snapshot_type: str
+
+    # -----------------------------------------------------
+    # SOURCE PROVENANCE
+    # -----------------------------------------------------
+
+    source_url: str | None = None
+
+    retrieval_status: str
+
+    content_type: str | None = None
+
+    authoritative_identifier: str | None = None
+    authoritative_version: str | None = None
+
+    retrieved_at: datetime | None = None
     captured_at: datetime
 
     model_config = {
         "from_attributes": True
     }
+
+# =========================================================
+# REGULATORY CHANGE EVIDENCE RESPONSE
+# =========================================================
+
+class RegulatoryChangeEvidenceResponse(BaseModel):
+    """
+    Complete evidence package for a detected
+    regulatory change.
+
+    Used by the Regulatory Intelligence review
+    interface to present the authoritative source,
+    previous snapshot, new snapshot, and technical
+    change evidence in one response.
+    """
+
+    change: RegulatoryChangeResponse
+
+    source: RegulatorySourceResponse
+
+    previous_snapshot: (
+        RegulatorySnapshotResponse | None
+    ) = None
+
+    new_snapshot: (
+        RegulatorySnapshotResponse | None
+    ) = None
+
+    evidence_complete: bool
+
+    evidence_warning: str | None = None
 
 
 # =========================================================

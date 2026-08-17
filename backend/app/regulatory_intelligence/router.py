@@ -24,6 +24,7 @@ from .models import (
     RegulatorySource,
 )
 from .schemas import (
+    RegulatoryChangeEvidenceResponse,
     RegulatoryChangeResponse,
     RegulatoryChangeReviewRequest,
     RegulatoryImpactReviewRequest,
@@ -404,6 +405,204 @@ def list_changes(
 
 
 # =========================================================
+# REGULATORY CHANGE EVIDENCE
+# =========================================================
+
+@router.get(
+    "/changes/{change_id}/evidence",
+    response_model=
+        RegulatoryChangeEvidenceResponse,
+)
+def get_regulatory_change_evidence(
+    change_id: int,
+    db: Session = Depends(
+        get_db
+    ),
+    current_user: User = Depends(
+        require_platform_admin
+    ),
+) -> RegulatoryChangeEvidenceResponse:
+    """
+    Retrieve the complete evidence package for a
+    detected regulatory-change candidate.
+
+    Includes:
+    - regulatory source
+    - previous authoritative snapshot
+    - new authoritative snapshot
+    - provenance metadata
+    - technical comparison evidence
+
+    Platform administrators only.
+    """
+
+    change = (
+        get_regulatory_change_or_404(
+            db,
+            change_id,
+        )
+    )
+
+    # -----------------------------------------------------
+    # SOURCE
+    # -----------------------------------------------------
+
+    source = (
+        db.query(
+            RegulatorySource
+        )
+        .filter(
+            RegulatorySource.id
+            == change.source_id
+        )
+        .first()
+    )
+
+    if source is None:
+        raise HTTPException(
+            status_code=
+                status.HTTP_409_CONFLICT,
+            detail=(
+                "The regulatory source associated "
+                "with this change no longer exists."
+            ),
+        )
+
+    # -----------------------------------------------------
+    # PREVIOUS SNAPSHOT
+    # -----------------------------------------------------
+
+    previous_snapshot = None
+
+    if (
+        change.previous_snapshot_id
+        is not None
+    ):
+        previous_snapshot = (
+            db.query(
+                RegulatorySnapshot
+            )
+            .filter(
+                RegulatorySnapshot.id
+                == change.previous_snapshot_id
+            )
+            .first()
+        )
+
+    # -----------------------------------------------------
+    # NEW SNAPSHOT
+    # -----------------------------------------------------
+
+    new_snapshot = None
+
+    if (
+        change.new_snapshot_id
+        is not None
+    ):
+        new_snapshot = (
+            db.query(
+                RegulatorySnapshot
+            )
+            .filter(
+                RegulatorySnapshot.id
+                == change.new_snapshot_id
+            )
+            .first()
+        )
+
+    # -----------------------------------------------------
+    # EVIDENCE INTEGRITY
+    # -----------------------------------------------------
+
+    evidence_complete = (
+        change.evidence_status
+        == "captured"
+        and previous_snapshot
+        is not None
+        and new_snapshot
+        is not None
+        and bool(
+            previous_snapshot.source_url
+        )
+        and bool(
+            new_snapshot.source_url
+        )
+        and (
+            previous_snapshot.retrieval_status
+            == "ok"
+        )
+        and (
+            new_snapshot.retrieval_status
+            == "ok"
+        )
+    )
+
+    evidence_warning = None
+
+    if not evidence_complete:
+        if (
+            change.evidence_status
+            == "legacy_partial"
+        ):
+            evidence_warning = (
+                "This regulatory change predates "
+                "full provenance tracking. Some "
+                "historical evidence is unavailable."
+            )
+
+        elif (
+            change.previous_snapshot_id
+            is None
+            or change.new_snapshot_id
+            is None
+        ):
+            evidence_warning = (
+                "Snapshot linkage is incomplete for "
+                "this regulatory change."
+            )
+
+        elif (
+            previous_snapshot is None
+            or new_snapshot is None
+        ):
+            evidence_warning = (
+                "One or more linked regulatory "
+                "snapshots could not be located."
+            )
+
+        else:
+            evidence_warning = (
+                "The evidence package is incomplete "
+                "or contains unverified provenance."
+            )
+
+    # -----------------------------------------------------
+    # RESPONSE
+    # -----------------------------------------------------
+
+    return RegulatoryChangeEvidenceResponse(
+        change=change,
+        source=source,
+
+        previous_snapshot=(
+            previous_snapshot
+        ),
+
+        new_snapshot=(
+            new_snapshot
+        ),
+
+        evidence_complete=(
+            evidence_complete
+        ),
+
+        evidence_warning=(
+            evidence_warning
+        ),
+    )
+
+
+# =========================================================
 # REVIEW REGULATORY CHANGE
 # =========================================================
 
@@ -437,7 +636,10 @@ def review_regulatory_change(
         )
     )
 
-    if change.published_at is not None:
+    if (
+        change.published_at
+        is not None
+    ):
         raise HTTPException(
             status_code=
                 status.HTTP_409_CONFLICT,
@@ -445,6 +647,25 @@ def review_regulatory_change(
                 "Published regulatory "
                 "intelligence cannot be "
                 "reviewed again."
+            ),
+        )
+
+    # -----------------------------------------------------
+    # WORKFLOW LOCK
+    # -----------------------------------------------------
+
+    if (
+        change.impact_status
+        == "analysed"
+    ):
+        raise HTTPException(
+            status_code=
+                status.HTTP_409_CONFLICT,
+            detail=(
+                "The regulatory review cannot "
+                "be changed after impact analysis "
+                "has been completed. A controlled "
+                "reopen workflow is required."
             ),
         )
 
@@ -472,12 +693,29 @@ def review_regulatory_change(
         "reviewed"
     )
 
+    # -----------------------------------------------------
+    # REVIEW DECISION STATE TRANSITIONS
+    # -----------------------------------------------------
+
     if (
         payload.review_decision
         == "confirmed"
     ):
         change.impact_status = (
             "analysis_required"
+        )
+
+        # A newly confirmed decision requires
+        # a fresh impact analysis.
+        #
+        # Clear values left from any previous
+        # dismissed workflow state.
+        change.impact_level = (
+            None
+        )
+
+        change.impact_summary = (
+            None
         )
 
     elif (
@@ -506,7 +744,20 @@ def review_regulatory_change(
             "in_review"
         )
 
+        change.impact_status = (
+            "not_analysed"
+        )
+
+        change.impact_level = (
+            None
+        )
+
+        change.impact_summary = (
+            None
+        )
+
     db.commit()
+
     db.refresh(
         change
     )
@@ -548,7 +799,10 @@ def review_regulatory_impact(
         )
     )
 
-    if change.published_at is not None:
+    if (
+        change.published_at
+        is not None
+    ):
         raise HTTPException(
             status_code=
                 status.HTTP_409_CONFLICT,
@@ -571,6 +825,19 @@ def review_regulatory_impact(
                 "be recorded after the "
                 "regulatory change has "
                 "been confirmed."
+            ),
+        )
+
+    if (
+        change.review_status
+        != "reviewed"
+    ):
+        raise HTTPException(
+            status_code=
+                status.HTTP_409_CONFLICT,
+            detail=(
+                "Impact analysis requires "
+                "a completed regulatory review."
             ),
         )
 
@@ -627,7 +894,10 @@ def publish_regulatory_change(
         )
     )
 
-    if change.published_at is not None:
+    if (
+        change.published_at
+        is not None
+    ):
         raise HTTPException(
             status_code=
                 status.HTTP_409_CONFLICT,
@@ -666,7 +936,10 @@ def publish_regulatory_change(
             ),
         )
 
-    if change.impact_level is None:
+    if (
+        change.impact_level
+        is None
+    ):
         raise HTTPException(
             status_code=
                 status.HTTP_409_CONFLICT,
@@ -681,6 +954,7 @@ def publish_regulatory_change(
     )
 
     db.commit()
+
     db.refresh(
         change
     )
@@ -791,7 +1065,10 @@ def list_source_snapshots(
         .first()
     )
 
-    if source is None:
+    if (
+        source
+        is None
+    ):
         raise HTTPException(
             status_code=
                 status.HTTP_404_NOT_FOUND,
