@@ -16,15 +16,15 @@ from app.regulatory_intelligence.router import (
     router as regulatory_intelligence_router,
 )
 
-from app.db.base import Base
-from app.db.session import engine
+#from app.db.base import Base
+#from app.db.session import engine
 
-import app.models  # Registers existing SQLAlchemy models
-import app.regulatory_intelligence.models  # Registers regulatory intelligence models
+#import app.models  # Registers existing SQLAlchemy models
+#import app.regulatory_intelligence.models  # Registers regulatory intelligence models
 
 
 # Create database tables
-Base.metadata.create_all(bind=engine)
+#Base.metadata.create_all(bind=engine)
 
 
 app = FastAPI(
