@@ -28,6 +28,9 @@ const API_URL =
 
 type RegulatorySource = {
   id: number;
+  regulation_id:
+    | number
+    | null;
   regulation_code: string;
   regulation_name: string;
   authority: string;
@@ -145,7 +148,13 @@ type RegulatoryPublishResponse = {
 
 
 type ApiError = {
-  detail?: string;
+  detail?:
+    | string
+    | Array<{
+        loc?: Array<string | number>;
+        msg?: string;
+        type?: string;
+      }>;
 };
 
 
@@ -173,6 +182,454 @@ type ImpactLevel =
   | "high"
   | "critical";
 
+  type AnalysisOrigin =
+  | "human"
+  | "ai_assisted"
+  | "system_generated";
+
+
+  type RegulatoryChangeAnalysis = {
+    id: number;
+
+    regulatory_change_id: number;
+
+    analysis_version: number;
+
+    analysis_status: string;
+
+    analysis_origin: string;
+
+    analysis_method:
+      | string
+      | null;
+
+    overall_impact_level:
+      | string
+      | null;
+
+    executive_summary:
+      | string
+      | null;
+
+    generated_by_model:
+      | string
+      | null;
+
+    generated_at:
+      | string
+      | null;
+
+    validated_by_user_id:
+      | number
+      | null;
+
+    validated_at:
+      | string
+      | null;
+
+    validation_notes:
+      | string
+      | null;
+
+    supersedes_analysis_id:
+      | number
+      | null;
+
+    created_at: string;
+
+    updated_at: string;
+  };
+
+
+  type RegulatoryChangeAnalysisListResponse = {
+    change_id: number;
+
+    analyses:
+      RegulatoryChangeAnalysis[];
+
+    count: number;
+  };
+
+
+  type RegulatoryKnowledgeRegulation = {
+    id: number;
+
+    name: string;
+
+    short_name:
+      | string
+      | null;
+
+    regulation_type?: string;
+
+    summary?:
+      | string
+      | null;
+
+    regulatory_authority?:
+      | string
+      | null;
+
+    official_source_url?:
+      | string
+      | null;
+
+    status?: string;
+  };
+
+
+  type RegulatoryKnowledgeArticle = {
+    id: number;
+
+    regulation_id: number;
+
+    article_number: string;
+
+    title:
+      | string
+      | null;
+
+    official_text?:
+      | string
+      | null;
+
+    summary?:
+      | string
+      | null;
+
+    source_url?:
+      | string
+      | null;
+
+    version?: string;
+
+    effective_from?:
+      | string
+      | null;
+
+    effective_to?:
+      | string
+      | null;
+
+    last_verified_at?:
+      | string
+      | null;
+  };
+
+
+  type RegulatoryKnowledgeObligation = {
+    id: number;
+
+    article_id: number;
+
+    obligation_code: string;
+
+    obligation_text: string;
+
+    obligation_type?: string;
+
+    applies_to?:
+      | string
+      | null;
+
+    applicability_condition?:
+      | string
+      | null;
+
+    mandatory?: boolean;
+
+    risk_level?: string;
+  };
+
+
+  type RegulatoryKnowledgeControl = {
+    id: number;
+
+    obligation_id: number;
+
+    control_code: string;
+
+    control_name: string;
+
+    control_description:
+      | string
+      | null;
+
+    evidence_required:
+      | string
+      | null;
+
+    test_method:
+      | string
+      | null;
+  };
+
+
+  type RegulatoryProvisionImpact = {
+    id: number;
+
+    analysis_id: number;
+
+    regulation_id:
+      | number
+      | null;
+
+    regulation_article_id:
+      | number
+      | null;
+
+    regulation_obligation_id:
+      | number
+      | null;
+
+    provision_reference: string;
+
+    provision_title:
+      | string
+      | null;
+
+    change_type: string;
+
+    previous_requirement:
+      | string
+      | null;
+
+    current_requirement:
+      | string
+      | null;
+
+    change_explanation:
+      | string
+      | null;
+
+    legal_interpretation:
+      | string
+      | null;
+
+    operational_impact:
+      | string
+      | null;
+
+    recommended_action:
+      | string
+      | null;
+
+    impact_level:
+      | string
+      | null;
+
+    source_snapshot_id:
+      | number
+      | null;
+
+    source_url:
+      | string
+      | null;
+
+    review_status: string;
+
+    reviewed_by_user_id:
+      | number
+      | null;
+
+    reviewed_at:
+      | string
+      | null;
+
+    created_at: string;
+
+    updated_at: string;
+  };
+
+
+  type RegulatoryProvisionImpactDetail = {
+    impact:
+      RegulatoryProvisionImpact;
+
+    regulation:
+      | RegulatoryKnowledgeRegulation
+      | null;
+
+    article:
+      | RegulatoryKnowledgeArticle
+      | null;
+
+    obligation:
+      | RegulatoryKnowledgeObligation
+      | null;
+
+    controls:
+      RegulatoryKnowledgeControl[];
+
+    source_snapshot:
+      | RegulatorySnapshot
+      | null;
+  };
+
+
+  type RegulatoryChangeAnalysisDetail = {
+    analysis:
+      RegulatoryChangeAnalysis;
+
+    change:
+      RegulatoryChange;
+
+    source:
+      RegulatorySource;
+
+    regulation:
+      | RegulatoryKnowledgeRegulation
+      | null;
+
+    provision_impacts:
+      RegulatoryProvisionImpactDetail[];
+
+    provision_count: number;
+
+    validated_provision_count: number;
+
+    affected_control_count: number;
+  };
+
+
+  type RegulatoryChangeAnalysisCreateResponse = {
+    analysis:
+      RegulatoryChangeAnalysis;
+
+    message: string;
+  };
+
+
+  type RegulatoryChangeAnalysisValidationResponse = {
+    id: number;
+
+    analysis_status: string;
+
+    validated_by_user_id: number;
+
+    validated_at: string;
+
+    validation_notes: string;
+
+    message: string;
+  };
+
+
+  type KnowledgePackControl = {
+    id: number;
+
+    control_code: string;
+
+    control_name: string;
+
+    control_description:
+      | string
+      | null;
+
+    evidence_required:
+      | string
+      | null;
+
+    test_method:
+      | string
+      | null;
+  };
+
+
+  type KnowledgePackObligation = {
+    id: number;
+
+    obligation_code: string;
+
+    obligation_text: string;
+
+    obligation_type: string;
+
+    applies_to:
+      | string
+      | null;
+
+    applicability_condition:
+      | string
+      | null;
+
+    mandatory: boolean;
+
+    risk_level: string;
+
+    controls:
+      KnowledgePackControl[];
+  };
+
+
+  type KnowledgePackArticle = {
+    id: number;
+
+    article_number: string;
+
+    title:
+      | string
+      | null;
+
+    summary:
+      | string
+      | null;
+
+    source_url:
+      | string
+      | null;
+
+    version: string;
+
+    effective_from:
+      | string
+      | null;
+
+    effective_to:
+      | string
+      | null;
+
+    obligations:
+      KnowledgePackObligation[];
+  };
+
+
+  type RegulationKnowledgePack = {
+    regulation: {
+      id: number;
+
+      name: string;
+
+      short_name:
+        | string
+        | null;
+
+      regulation_type: string;
+
+      summary:
+        | string
+        | null;
+
+      regulatory_authority:
+        | string
+        | null;
+
+      official_source_url:
+        | string
+        | null;
+
+      status: string;
+
+      extraterritorial: boolean;
+
+      mandatory: boolean;
+    };
+
+    article_count: number;
+
+    articles:
+      KnowledgePackArticle[];
+  };
 
 export default function RegulatoryChangeReviewPage() {
   const params =
@@ -194,6 +651,156 @@ export default function RegulatoryChangeReviewPage() {
     setEvidence,
   ] = useState<
     RegulatoryEvidence | null
+  >(null);
+
+    const [
+    analyses,
+    setAnalyses,
+  ] = useState<
+    RegulatoryChangeAnalysis[]
+  >([]);
+
+  const [
+    selectedAnalysisId,
+    setSelectedAnalysisId,
+  ] = useState<
+    number | null
+  >(null);
+
+  const [
+    analysisDetail,
+    setAnalysisDetail,
+  ] = useState<
+    RegulatoryChangeAnalysisDetail | null
+  >(null);
+
+  const [
+    knowledgePack,
+    setKnowledgePack,
+  ] = useState<
+    RegulationKnowledgePack | null
+  >(null);
+
+
+    const [
+    isLoadingAnalysis,
+    setIsLoadingAnalysis,
+  ] = useState(false);
+
+  const [
+    isSavingAnalysis,
+    setIsSavingAnalysis,
+  ] = useState(false);
+
+  const [
+    isSavingProvision,
+    setIsSavingProvision,
+  ] = useState(false);
+
+  const [
+    isValidatingAnalysis,
+    setIsValidatingAnalysis,
+  ] = useState(false);
+
+  const [
+    analysisOrigin,
+    setAnalysisOrigin,
+  ] = useState<AnalysisOrigin>(
+    "human"
+  );
+
+  const [
+    analysisMethod,
+    setAnalysisMethod,
+  ] = useState(
+    "Human regulatory impact assessment"
+  );
+
+  const [
+    analysisImpactLevel,
+    setAnalysisImpactLevel,
+  ] = useState<ImpactLevel>(
+    "moderate"
+  );
+
+  const [
+    executiveSummary,
+    setExecutiveSummary,
+  ] = useState("");
+
+  const [
+    generatedByModel,
+    setGeneratedByModel,
+  ] = useState("");
+
+  const [
+    validationNotes,
+    setValidationNotes,
+  ] = useState("");
+
+  const [
+    selectedArticleId,
+    setSelectedArticleId,
+  ] = useState<
+    number | null
+  >(null);
+
+  const [
+    selectedObligationId,
+    setSelectedObligationId,
+  ] = useState<
+    number | null
+  >(null);
+
+  const [
+    provisionChangeType,
+    setProvisionChangeType,
+  ] = useState<ChangeType>(
+    "obligation_change"
+  );
+
+  const [
+    previousRequirement,
+    setPreviousRequirement,
+  ] = useState("");
+
+  const [
+    currentRequirement,
+    setCurrentRequirement,
+  ] = useState("");
+
+  const [
+    changeExplanation,
+    setChangeExplanation,
+  ] = useState("");
+
+  const [
+    legalInterpretation,
+    setLegalInterpretation,
+  ] = useState("");
+
+  const [
+    operationalImpact,
+    setOperationalImpact,
+  ] = useState("");
+
+  const [
+    recommendedAction,
+    setRecommendedAction,
+  ] = useState("");
+
+  const [
+    provisionImpactLevel,
+    setProvisionImpactLevel,
+  ] = useState<ImpactLevel>(
+    "moderate"
+  );
+
+  const [
+    sourceSnapshotId,
+    setSourceSnapshotId,
+  ] = useState<
+    number | null
   >(null);
 
   const [
@@ -289,6 +896,333 @@ export default function RegulatoryChangeReviewPage() {
         return token;
       },
       [
+        router,
+      ]
+    );
+
+    const loadAnalyses =
+    useCallback(
+      async (
+        token: string,
+        preferredAnalysisId?: number | null
+      ) => {
+        const response =
+          await fetch(
+            `${API_URL}/api/v1/regulatory-intelligence/changes/${changeId}/analyses`,
+            {
+              headers: {
+                Accept:
+                  "application/json",
+
+                Authorization:
+                  `Bearer ${token}`,
+              },
+
+              cache:
+                "no-store",
+            }
+          );
+
+        if (
+          response.status
+          === 401
+        ) {
+          clearAuthentication();
+
+          router.replace(
+            "/login"
+          );
+
+          return {
+            analyses: [],
+            selectedId: null,
+          };
+        }
+
+        const data =
+          (
+            await response.json()
+          ) as
+            | RegulatoryChangeAnalysisListResponse
+            | ApiError;
+
+        if (
+          !response.ok
+        ) {
+          throw new Error(
+            getApiErrorMessage(
+              data as ApiError,
+              "Unable to load structured analyses."
+            )
+          );
+        }
+
+        const result =
+          data as
+            RegulatoryChangeAnalysisListResponse;
+
+        setAnalyses(
+          result.analyses
+        );
+
+        const preferred =
+          preferredAnalysisId
+          ?? selectedAnalysisId;
+
+        const validPreferred =
+          preferred
+          && result.analyses.some(
+            (
+              item
+            ) =>
+              item.id
+              === preferred
+          )
+            ? preferred
+            : null;
+
+        const nextId =
+          validPreferred
+          ?? result.analyses[0]?.id
+          ?? null;
+
+        setSelectedAnalysisId(
+          nextId
+        );
+
+        return {
+          analyses:
+            result.analyses,
+
+          selectedId:
+            nextId,
+        };
+      },
+      [
+        changeId,
+        router,
+        selectedAnalysisId,
+      ]
+    );
+    
+    const loadKnowledgePack =
+    useCallback(
+      async (
+        token: string,
+        regulationId: number
+      ) => {
+        const response =
+          await fetch(
+            `${API_URL}/api/v1/regulations/${regulationId}/knowledge-pack`,
+            {
+              headers: {
+                Accept:
+                  "application/json",
+
+                Authorization:
+                  `Bearer ${token}`,
+              },
+
+              cache:
+                "no-store",
+            }
+          );
+
+        if (
+          response.status
+          === 401
+        ) {
+          clearAuthentication();
+
+          router.replace(
+            "/login"
+          );
+
+          return;
+        }
+
+        const data =
+          (
+            await response.json()
+          ) as
+            | RegulationKnowledgePack
+            | ApiError;
+
+        if (
+          !response.ok
+        ) {
+          throw new Error(
+            getApiErrorMessage(
+              data as ApiError,
+              "Unable to load regulatory knowledge pack."
+            )
+          );
+        }
+
+        const result =
+          data as
+            RegulationKnowledgePack;
+
+        setKnowledgePack(
+          result
+        );
+
+        setSelectedArticleId(
+          (
+            current
+          ) => {
+            if (
+              current
+              && result.articles.some(
+                (
+                  article
+                ) =>
+                  article.id
+                  === current
+              )
+            ) {
+              return current;
+            }
+
+            return (
+              result.articles[0]?.id
+              ?? null
+            );
+          }
+        );
+      },
+      [
+        router,
+      ]
+    );
+  
+    const loadAnalysisDetail =
+    useCallback(
+      async (
+        token: string,
+        analysisId: number
+      ) => {
+        try {
+          setIsLoadingAnalysis(
+            true
+          );
+
+          const response =
+            await fetch(
+              `${API_URL}/api/v1/regulatory-intelligence/changes/${changeId}/analyses/${analysisId}`,
+              {
+                headers: {
+                  Accept:
+                    "application/json",
+
+                  Authorization:
+                    `Bearer ${token}`,
+                },
+
+                cache:
+                  "no-store",
+              }
+            );
+
+          if (
+            response.status
+            === 401
+          ) {
+            clearAuthentication();
+
+            router.replace(
+              "/login"
+            );
+
+            return;
+          }
+
+          const data =
+            (
+              await response.json()
+            ) as
+              | RegulatoryChangeAnalysisDetail
+              | ApiError;
+
+          if (
+              !response.ok
+            ) {
+              throw new Error(
+                getApiErrorMessage(
+                  data as ApiError,
+                  "Unable to load structured analysis."
+                )
+              );
+          }
+
+          const detail =
+            data as
+              RegulatoryChangeAnalysisDetail;
+
+          setAnalysisDetail(
+            detail
+          );
+
+          setAnalysisOrigin(
+            detail.analysis
+              .analysis_origin as
+              AnalysisOrigin
+          );
+
+          setAnalysisMethod(
+            detail.analysis
+              .analysis_method
+              ?? ""
+          );
+
+          setAnalysisImpactLevel(
+            (
+              detail.analysis
+                .overall_impact_level
+              ?? "moderate"
+            ) as ImpactLevel
+          );
+
+          setExecutiveSummary(
+            detail.analysis
+              .executive_summary
+              ?? ""
+          );
+
+          setGeneratedByModel(
+            detail.analysis
+              .generated_by_model
+              ?? ""
+          );
+
+          setValidationNotes(
+            detail.analysis
+              .validation_notes
+              ?? ""
+          );
+
+          if (
+            detail.regulation
+          ) {
+            await loadKnowledgePack(
+              token,
+              detail.regulation.id
+            );
+          } else {
+            setKnowledgePack(
+              null
+            );
+          }
+
+        } finally {
+          setIsLoadingAnalysis(
+            false
+          );
+        }
+      },
+      [
+        changeId,
+        loadKnowledgePack,
         router,
       ]
     );
@@ -398,17 +1332,14 @@ export default function RegulatoryChangeReviewPage() {
 
 
           if (
-            !response.ok
-          ) {
-            throw new Error(
-              "detail" in data
-              && data.detail
-                ? data.detail
-                : (
-                  "Unable to load regulatory "
-                  + "change evidence."
+              !response.ok
+            ) {
+              throw new Error(
+                getApiErrorMessage(
+                  data as ApiError,
+                  "Unable to load regulatory change evidence."
                 )
-            );
+              );
           }
 
 
@@ -473,6 +1404,56 @@ export default function RegulatoryChangeReviewPage() {
               ?? ""
           );
 
+          
+          setSourceSnapshotId(
+            result.change
+              .new_snapshot_id
+            ?? null
+          );
+
+            if (
+              result.source
+                .regulation_id
+            ) {
+            const analysisResult =
+              await loadAnalyses(
+                token
+              );
+
+            if (
+              analysisResult.selectedId
+            ) {
+              await loadAnalysisDetail(
+                token,
+                analysisResult.selectedId
+              );
+            } else {
+              setAnalysisDetail(
+                null
+              );
+
+              setKnowledgePack(
+                null
+              );
+            }
+          } else {
+            setAnalyses(
+              []
+            );
+
+            setSelectedAnalysisId(
+              null
+            );
+
+            setAnalysisDetail(
+              null
+            );
+
+            setKnowledgePack(
+              null
+            );
+          }
+
         } catch (error) {
           console.error(
             "Evidence load error:",
@@ -497,6 +1478,8 @@ export default function RegulatoryChangeReviewPage() {
       [
         changeId,
         getToken,
+        loadAnalyses,
+        loadAnalysisDetail,
         router,
       ]
     );
@@ -511,6 +1494,147 @@ export default function RegulatoryChangeReviewPage() {
     ]
   );
 
+    useEffect(
+    () => {
+      if (
+        !knowledgePack
+        || !selectedArticleId
+      ) {
+        setSelectedObligationId(
+          null
+        );
+
+        return;
+      }
+
+      const article =
+        knowledgePack.articles
+          .find(
+            (
+              item
+            ) =>
+              item.id
+              === selectedArticleId
+          );
+
+      setSelectedObligationId(
+        (
+          current
+        ) => {
+          if (
+            current
+            && article?.obligations
+              .some(
+                (
+                  item
+                ) =>
+                  item.id
+                  === current
+              )
+          ) {
+            return current;
+          }
+
+          return (
+            article?.obligations[0]
+              ?.id
+            ?? null
+          );
+        }
+      );
+    },
+    [
+      knowledgePack,
+      selectedArticleId,
+    ]
+  );
+    const isMappedSource =
+    useMemo(
+      () =>
+        Boolean(
+          evidence?.source
+            .regulation_id
+        ),
+      [
+        evidence,
+      ]
+    );
+
+
+  const selectedAnalysis =
+    useMemo(
+      () =>
+        analyses.find(
+          (
+            item
+          ) =>
+            item.id
+            === selectedAnalysisId
+        )
+        ?? null,
+      [
+        analyses,
+        selectedAnalysisId,
+      ]
+    );
+
+
+  const latestValidatedAnalysis =
+    useMemo(
+      () =>
+        analyses.find(
+          (
+            item
+          ) =>
+            item.analysis_status
+            === "validated"
+            || item.analysis_status
+            === "published"
+        )
+        ?? null,
+      [
+        analyses,
+      ]
+    );
+
+
+  const selectedArticle =
+    knowledgePack?.articles.find(
+      (article) =>
+        article.id === selectedArticleId
+    ) ?? null;
+
+  const selectedObligation =
+    selectedArticle?.obligations.find(
+      (obligation) =>
+        obligation.id === selectedObligationId
+    ) ?? null;
+
+  const selectedObligationControls =
+    selectedObligation?.controls ?? [];
+
+
+  const isAnalysisEditable =
+    useMemo(
+      () =>
+        Boolean(
+          analysisDetail
+          && !evidence?.change
+            .published_at
+          && ![
+            "validated",
+            "published",
+            "superseded",
+          ].includes(
+            analysisDetail.analysis
+              .analysis_status
+          )
+        ),
+      [
+        analysisDetail,
+        evidence,
+      ]
+    );
 
   const canReview =
     useMemo(
@@ -678,18 +1802,15 @@ export default function RegulatoryChangeReviewPage() {
 
 
       if (
-        !response.ok
-      ) {
+          !response.ok
+        ) {
         throw new Error(
-          "detail" in data
-          && data.detail
-            ? data.detail
-            : (
-              "Unable to save "
-              + "regulatory review."
-            )
+          getApiErrorMessage(
+            data as ApiError,
+              "Unable to load structured analyses."
+          )
         );
-      }
+        }   
 
 
       if (
@@ -859,18 +1980,15 @@ export default function RegulatoryChangeReviewPage() {
 
 
       if (
-        !response.ok
+          !response.ok
       ) {
-        throw new Error(
-          "detail" in data
-          && data.detail
-            ? data.detail
-            : (
-              "Unable to save "
-              + "regulatory impact analysis."
+          throw new Error(
+            getApiErrorMessage(
+              data as ApiError,
+              "Unable to save regulatory impact analysis."
             )
-        );
-      }
+          );
+        }
 
 
       setSuccessMessage(
@@ -900,6 +2018,310 @@ export default function RegulatoryChangeReviewPage() {
 
     } finally {
       setIsSubmittingImpact(
+        false
+      );
+    }
+  }
+
+  async function selectAnalysisVersion(
+    analysisId: number
+  ) {
+    const token =
+      getToken();
+
+    if (!token) {
+      return;
+    }
+
+    try {
+      setErrorMessage(
+        ""
+      );
+
+      setSuccessMessage(
+        ""
+      );
+
+      setSelectedAnalysisId(
+        analysisId
+      );
+
+      await loadAnalysisDetail(
+        token,
+        analysisId
+      );
+
+    } catch (error) {
+      console.error(
+        "Analysis version selection error:",
+        error
+      );
+
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : (
+              "Unable to load the selected "
+              + "analysis version."
+            )
+      );
+    }
+  }
+
+
+  async function saveStructuredAnalysis(
+    createNewVersion = false
+  ) {
+    if (!evidence) {
+      return;
+    }
+
+    const token =
+      getToken();
+
+    if (!token) {
+      return;
+    }
+
+    if (!isMappedSource) {
+      setErrorMessage(
+        "Structured analysis is unavailable "
+        + "because this regulatory source is "
+        + "not mapped to a canonical regulation."
+      );
+
+      return;
+    }
+
+    if (
+      evidence.change.review_status
+        !== "reviewed"
+      || evidence.change.review_decision
+        !== "confirmed"
+    ) {
+      setErrorMessage(
+        "Structured analysis requires a "
+        + "completed and confirmed regulatory "
+        + "review."
+      );
+
+      return;
+    }
+
+    const cleanedMethod =
+      analysisMethod.trim();
+
+    const cleanedSummary =
+      executiveSummary.trim();
+
+    const cleanedModel =
+      generatedByModel.trim();
+
+    if (
+      cleanedSummary.length > 0
+      && cleanedSummary.length < 10
+    ) {
+      setErrorMessage(
+        "Executive summary must contain "
+        + "at least 10 characters when provided."
+      );
+
+      return;
+    }
+
+    if (
+      analysisOrigin !== "human"
+      && !cleanedModel
+    ) {
+      setErrorMessage(
+        "Generated-by model is required "
+        + "for AI-assisted or system-generated "
+        + "analysis."
+      );
+
+      return;
+    }
+
+    try {
+      setIsSavingAnalysis(
+        true
+      );
+
+      setErrorMessage(
+        ""
+      );
+
+      setSuccessMessage(
+        ""
+      );
+
+      const isCreating =
+        createNewVersion
+        || !selectedAnalysisId;
+
+      const supersedesAnalysisId =
+        createNewVersion
+          ? selectedAnalysisId
+          : null;
+
+      const url =
+        isCreating
+          ? (
+            `${API_URL}/api/v1/regulatory-intelligence/changes/${changeId}/analyses`
+          )
+          : (
+            `${API_URL}/api/v1/regulatory-intelligence/changes/${changeId}/analyses/${selectedAnalysisId}`
+          );
+
+      const body =
+        isCreating
+          ? {
+              analysis_origin:
+                analysisOrigin,
+
+              analysis_method:
+                cleanedMethod || null,
+
+              overall_impact_level:
+                analysisImpactLevel,
+
+              executive_summary:
+                cleanedSummary || null,
+
+              generated_by_model:
+                analysisOrigin === "human"
+                  ? null
+                  : cleanedModel,
+
+              supersedes_analysis_id:
+                supersedesAnalysisId,
+            }
+          : {
+              analysis_method:
+                cleanedMethod || null,
+
+              overall_impact_level:
+                analysisImpactLevel,
+
+              executive_summary:
+                cleanedSummary || null,
+            };
+
+      const response =
+        await fetch(
+          url,
+          {
+            method:
+              isCreating
+                ? "POST"
+                : "PATCH",
+
+            headers: {
+              Accept:
+                "application/json",
+
+              "Content-Type":
+                "application/json",
+
+              Authorization:
+                `Bearer ${token}`,
+            },
+
+            body:
+              JSON.stringify(
+                body
+              ),
+          }
+        );
+
+      if (
+        response.status === 401
+      ) {
+        clearAuthentication();
+
+        router.replace(
+          "/login"
+        );
+
+        return;
+      }
+
+      const data =
+        (
+          await response.json()
+        ) as
+          | RegulatoryChangeAnalysisCreateResponse
+          | RegulatoryChangeAnalysis
+          | ApiError;
+
+      if (!response.ok) {
+        throw new Error(
+          getApiErrorMessage(
+            data as ApiError,
+            isCreating
+              ? "Unable to create structured regulatory analysis."
+              : "Unable to update structured regulatory analysis."
+          )
+        );
+      }
+
+      const savedAnalysis =
+        isCreating
+          ? (
+              data as
+                RegulatoryChangeAnalysisCreateResponse
+            ).analysis
+          : (
+              data as
+                RegulatoryChangeAnalysis
+            );
+
+      const result =
+        await loadAnalyses(
+          token,
+          savedAnalysis.id
+        );
+
+      if (
+        result.selectedId
+      ) {
+        await loadAnalysisDetail(
+          token,
+          result.selectedId
+        );
+      }
+
+      setSuccessMessage(
+        isCreating
+          ? (
+            `Structured regulatory analysis version `
+            + `${savedAnalysis.analysis_version} `
+            + `created successfully.`
+          )
+          : (
+            `Structured regulatory analysis version `
+            + `${savedAnalysis.analysis_version} `
+            + `updated successfully.`
+          )
+      );
+
+    } catch (error) {
+      console.error(
+        "Structured analysis save error:",
+        error
+      );
+
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : (
+              "Unable to save structured "
+              + "regulatory analysis."
+            )
+      );
+
+    } finally {
+      setIsSavingAnalysis(
         false
       );
     }
@@ -1009,13 +2431,10 @@ export default function RegulatoryChangeReviewPage() {
         !response.ok
       ) {
         throw new Error(
-          "detail" in data
-          && data.detail
-            ? data.detail
-            : (
-              "Unable to publish "
-              + "regulatory intelligence."
-            )
+          getApiErrorMessage(
+            data as ApiError,
+            "Unable to publish regulatory intelligence."
+          )
         );
       }
 
@@ -1052,6 +2471,464 @@ export default function RegulatoryChangeReviewPage() {
 
     } finally {
       setIsPublishing(
+        false
+      );
+    }
+  }
+
+
+  async function handleCreateProvisionImpact() {
+    if (
+      !selectedAnalysisId
+      || !knowledgePack
+      || !selectedArticle
+    ) {
+      setErrorMessage(
+        "Select an analysis and regulatory "
+        + "Article before creating a "
+        + "provision impact."
+      );
+
+      return;
+    }
+
+
+    if (
+      !isAnalysisEditable
+    ) {
+      setErrorMessage(
+        "The selected structured analysis "
+        + "is read-only and cannot be modified."
+      );
+
+      return;
+    }
+
+
+    const cleanedExplanation =
+      changeExplanation.trim();
+
+
+    if (
+      cleanedExplanation.length
+      < 10
+    ) {
+      setErrorMessage(
+        "Change explanation must contain "
+        + "at least 10 characters."
+      );
+
+      return;
+    }
+
+
+    const token =
+      getToken();
+
+
+    if (
+      !token
+    ) {
+      return;
+    }
+
+
+    try {
+      setIsSavingProvision(
+        true
+      );
+
+      setErrorMessage(
+        ""
+      );
+
+      setSuccessMessage(
+        ""
+      );
+
+
+      const response =
+        await fetch(
+          `${API_URL}/api/v1/regulatory-intelligence/changes/${changeId}/analyses/${selectedAnalysisId}/provision-impacts`,
+          {
+            method:
+              "POST",
+
+            headers: {
+              Accept:
+                "application/json",
+
+              "Content-Type":
+                "application/json",
+
+              Authorization:
+                `Bearer ${token}`,
+            },
+
+            body:
+              JSON.stringify({
+                regulation_id:
+                  knowledgePack
+                    .regulation.id,
+
+                regulation_article_id:
+                  selectedArticle.id,
+
+                regulation_obligation_id:
+                  selectedObligation?.id
+                  ?? null,
+
+                provision_reference:
+                  selectedArticle
+                    .article_number,
+
+                provision_title:
+                  selectedArticle.title
+                  ?? null,
+
+                change_type:
+                  provisionChangeType,
+
+                previous_requirement:
+                  previousRequirement.trim()
+                  || null,
+
+                current_requirement:
+                  currentRequirement.trim()
+                  || null,
+
+                change_explanation:
+                  cleanedExplanation,
+
+                legal_interpretation:
+                  legalInterpretation.trim()
+                  || null,
+
+                operational_impact:
+                  operationalImpact.trim()
+                  || null,
+
+                recommended_action:
+                  recommendedAction.trim()
+                  || null,
+
+                impact_level:
+                  provisionImpactLevel,
+
+                source_snapshot_id:
+                  sourceSnapshotId,
+
+                source_url:
+                  selectedArticle.source_url
+                  ?? null,
+              }),
+          }
+        );
+
+
+      if (
+        response.status
+        === 401
+      ) {
+        clearAuthentication();
+
+        router.replace(
+          "/login"
+        );
+
+        return;
+      }
+
+
+      const data =
+        (
+          await response.json()
+        ) as
+          | {
+              impact:
+                RegulatoryProvisionImpact;
+
+              controls:
+                RegulatoryKnowledgeControl[];
+
+              message:
+                string;
+            }
+          | ApiError;
+
+
+      if (
+        !response.ok
+      ) {
+        throw new Error(
+          getApiErrorMessage(
+            data as ApiError,
+            "Unable to create regulatory "
+            + "provision impact."
+          )
+        );
+      }
+
+
+      const created =
+        data as {
+          impact:
+            RegulatoryProvisionImpact;
+
+          controls:
+            RegulatoryKnowledgeControl[];
+
+          message:
+            string;
+        };
+
+
+      setSuccessMessage(
+        created.message
+        || (
+          "Regulatory provision impact "
+          + "created successfully."
+        )
+      );
+
+
+      setPreviousRequirement(
+        ""
+      );
+
+      setCurrentRequirement(
+        ""
+      );
+
+      setChangeExplanation(
+        ""
+      );
+
+      setLegalInterpretation(
+        ""
+      );
+
+      setOperationalImpact(
+        ""
+      );
+
+      setRecommendedAction(
+        ""
+      );
+
+
+      await loadAnalyses(
+        token,
+        selectedAnalysisId
+      );
+
+
+      await loadAnalysisDetail(
+        token,
+        selectedAnalysisId
+      );
+
+    } catch (error) {
+      console.error(
+        "Provision impact creation error:",
+        error
+      );
+
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : (
+              "Unable to create regulatory "
+              + "provision impact."
+            )
+      );
+
+    } finally {
+      setIsSavingProvision(
+        false
+      );
+    }
+  }
+
+
+  async function handleValidateStructuredAnalysis() {
+    if (
+      !selectedAnalysisId
+      || !analysisDetail
+    ) {
+      setErrorMessage(
+        "Select a structured analysis "
+        + "before validation."
+      );
+
+      return;
+    }
+
+
+    if (
+      !isAnalysisEditable
+    ) {
+      setErrorMessage(
+        "The selected structured analysis "
+        + "is already locked and cannot "
+        + "be validated again."
+      );
+
+      return;
+    }
+
+
+    if (
+      analysisDetail.provision_count
+      < 1
+    ) {
+      setErrorMessage(
+        "At least one Article / provision "
+        + "impact is required before "
+        + "validation."
+      );
+
+      return;
+    }
+
+
+    const cleanedNotes =
+      validationNotes.trim();
+
+
+    if (
+      cleanedNotes.length
+      < 10
+    ) {
+      setErrorMessage(
+        "Validation notes must contain "
+        + "at least 10 characters."
+      );
+
+      return;
+    }
+
+
+    const token =
+      getToken();
+
+
+    if (
+      !token
+    ) {
+      return;
+    }
+
+
+    try {
+      setIsValidatingAnalysis(
+        true
+      );
+
+      setErrorMessage(
+        ""
+      );
+
+      setSuccessMessage(
+        ""
+      );
+
+
+      const response =
+        await fetch(
+          `${API_URL}/api/v1/regulatory-intelligence/changes/${changeId}/analyses/${selectedAnalysisId}/validate`,
+          {
+            method:
+              "POST",
+
+            headers: {
+              Accept:
+                "application/json",
+
+              "Content-Type":
+                "application/json",
+
+              Authorization:
+                `Bearer ${token}`,
+            },
+
+            body:
+              JSON.stringify({
+                validation_notes:
+                  cleanedNotes,
+              }),
+          }
+        );
+
+
+      if (
+        response.status
+        === 401
+      ) {
+        clearAuthentication();
+
+        router.replace(
+          "/login"
+        );
+
+        return;
+      }
+
+
+      const data =
+        (
+          await response.json()
+        ) as
+          | RegulatoryChangeAnalysisValidationResponse
+          | ApiError;
+
+
+      if (
+        !response.ok
+      ) {
+        throw new Error(
+          getApiErrorMessage(
+            data as ApiError,
+            "Unable to validate structured "
+            + "regulatory analysis."
+          )
+        );
+      }
+
+
+      const validated =
+        data as
+          RegulatoryChangeAnalysisValidationResponse;
+
+
+      setSuccessMessage(
+        validated.message
+        || (
+          "Structured regulatory analysis "
+          + "validated successfully."
+        )
+      );
+
+
+      await loadEvidence();
+
+    } catch (error) {
+      console.error(
+        "Structured analysis validation error:",
+        error
+      );
+
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : (
+              "Unable to validate structured "
+              + "regulatory analysis."
+            )
+      );
+
+    } finally {
+      setIsValidatingAnalysis(
         false
       );
     }
@@ -2096,6 +3973,2575 @@ export default function RegulatoryChangeReviewPage() {
             </button>
           </div>
         </SectionCard>
+
+
+        {/* STRUCTURED REGULATORY ANALYSIS */}
+
+        {
+          change.review_decision
+          === "confirmed"
+          && isMappedSource
+          && (
+            <SectionCard>
+              <div
+                style={{
+                  display:
+                    "flex",
+
+                  justifyContent:
+                    "space-between",
+
+                  alignItems:
+                    "flex-start",
+
+                  gap:
+                    "16px",
+
+                  flexWrap:
+                    "wrap",
+
+                  marginBottom:
+                    "18px",
+                }}
+              >
+                <div>
+                  <h2
+                    style={{
+                      margin:
+                        "0 0 6px",
+
+                      fontSize:
+                        "21px",
+                    }}
+                  >
+                    Structured Regulatory Analysis
+                  </h2>
+
+                  <p
+                    style={{
+                      margin:
+                        0,
+
+                      color:
+                        "#64748b",
+
+                      fontSize:
+                        "14px",
+
+                      lineHeight:
+                        1.6,
+                    }}
+                  >
+                    Create and maintain versioned
+                    regulatory analysis linked to
+                    the canonical Regulatory
+                    Library.
+                  </p>
+                </div>
+
+                {
+                  selectedAnalysis
+                  ? (
+                    <StatusBadge
+                      text={
+                        formatStatus(
+                          selectedAnalysis
+                            .analysis_status
+                        )
+                      }
+                      tone={
+                        [
+                          "validated",
+                          "published",
+                        ].includes(
+                          selectedAnalysis
+                            .analysis_status
+                        )
+                          ? "success"
+                          : "warning"
+                      }
+                    />
+                  )
+                  : (
+                    <StatusBadge
+                      text="No Analysis"
+                      tone="neutral"
+                    />
+                  )
+                }
+              </div>
+
+
+              {
+                analyses.length === 0
+                ? (
+                  <MessageBox
+                    tone="warning"
+                  >
+                    No structured regulatory
+                    analysis exists yet for this
+                    regulatory change. Create
+                    version 1 to begin the
+                    Article / provision-level
+                    assessment.
+                  </MessageBox>
+                )
+                : (
+                  <div
+                    style={{
+                      marginBottom:
+                        "20px",
+
+                      padding:
+                        "16px",
+
+                      border:
+                        "1px solid #e2e8f0",
+
+                      borderRadius:
+                        "10px",
+
+                      backgroundColor:
+                        "#f8fafc",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display:
+                          "grid",
+
+                        gridTemplateColumns:
+                          "repeat(auto-fit, minmax(240px, 1fr))",
+
+                        gap:
+                          "16px",
+                      }}
+                    >
+                      <div>
+                        <label
+                          style={
+                            labelStyle
+                          }
+                        >
+                          Analysis Version
+                        </label>
+
+                        <select
+                          value={
+                            selectedAnalysisId
+                            ?? ""
+                          }
+                          onChange={
+                            (event) => {
+                              const analysisId =
+                                Number(
+                                  event.target.value
+                                );
+
+                              if (
+                                Number.isInteger(
+                                  analysisId
+                                )
+                                && analysisId > 0
+                              ) {
+                                void selectAnalysisVersion(
+                                  analysisId
+                                );
+                              }
+                            }
+                          }
+                          disabled={
+                            isLoadingAnalysis
+                            || isSavingAnalysis
+                          }
+                          style={
+                            inputStyle
+                          }
+                        >
+                          {
+                            analyses.map(
+                              (
+                                analysis
+                              ) => (
+                                <option
+                                  key={
+                                    analysis.id
+                                  }
+                                  value={
+                                    analysis.id
+                                  }
+                                >
+                                  {
+                                    `Version ${analysis.analysis_version}`
+                                    + ` · ${formatStatus(
+                                      analysis.analysis_status
+                                    )}`
+                                  }
+                                </option>
+                              )
+                            )
+                          }
+                        </select>
+                      </div>
+
+
+                      <div>
+                        <InfoItem
+                          label="Selected Version"
+                          value={
+                            selectedAnalysis
+                              ? (
+                                  `Version `
+                                  + `${selectedAnalysis.analysis_version}`
+                                )
+                              : "Not available"
+                          }
+                        />
+
+                        <InfoItem
+                          label="Created"
+                          value={
+                            selectedAnalysis
+                              ? formatDate(
+                                  selectedAnalysis
+                                    .created_at
+                                )
+                              : "Not available"
+                          }
+                        />
+                      </div>
+
+
+                      <div>
+                        <InfoItem
+                          label="Analysis Origin"
+                          value={
+                            selectedAnalysis
+                              ? formatStatus(
+                                  selectedAnalysis
+                                    .analysis_origin
+                                )
+                              : "Not available"
+                          }
+                        />
+
+                        <InfoItem
+                          label="Status"
+                          value={
+                            selectedAnalysis
+                              ? formatStatus(
+                                  selectedAnalysis
+                                    .analysis_status
+                                )
+                              : "Not available"
+                          }
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )
+              }
+
+
+              {
+                selectedAnalysis
+                && !isAnalysisEditable
+                && (
+                  <MessageBox
+                    tone="warning"
+                  >
+                    This analysis version is
+                    read-only because its current
+                    status is{" "}
+                    <strong>
+                      {
+                        formatStatus(
+                          selectedAnalysis
+                            .analysis_status
+                        )
+                      }
+                    </strong>
+                    . Create a new version if
+                    further regulatory analysis
+                    is required.
+                  </MessageBox>
+                )
+              }
+
+
+              {
+                latestValidatedAnalysis
+                && (
+                  <MessageBox
+                    tone="success"
+                  >
+                    The latest validated regulatory
+                    analysis is{" "}
+                    <strong>
+                      Version{" "}
+                      {
+                        latestValidatedAnalysis
+                          .analysis_version
+                      }
+                    </strong>
+                    .
+                  </MessageBox>
+                )
+              }
+
+
+              {
+                isLoadingAnalysis
+                && (
+                  <MessageBox
+                    tone="warning"
+                  >
+                    Loading structured regulatory
+                    analysis...
+                  </MessageBox>
+                )
+              }
+
+
+              <div
+                style={{
+                  display:
+                    "grid",
+
+                  gridTemplateColumns:
+                    "repeat(auto-fit, minmax(260px, 1fr))",
+
+                  gap:
+                    "18px",
+                }}
+              >
+                <div>
+                  <label
+                    style={
+                      labelStyle
+                    }
+                  >
+                    Analysis Origin
+                  </label>
+
+                  <select
+                    value={
+                      analysisOrigin
+                    }
+                    onChange={
+                      (event) =>
+                        setAnalysisOrigin(
+                          event.target
+                            .value as
+                            AnalysisOrigin
+                        )
+                    }
+                    disabled={
+                      Boolean(
+                        selectedAnalysisId
+                      )
+                      || isSavingAnalysis
+                    }
+                    style={
+                      inputStyle
+                    }
+                  >
+                    <option
+                      value="human"
+                    >
+                      Human
+                    </option>
+
+                    <option
+                      value="ai_assisted"
+                    >
+                      AI Assisted
+                    </option>
+
+                    <option
+                      value="system_generated"
+                    >
+                      System Generated
+                    </option>
+                  </select>
+                </div>
+
+
+                <div>
+                  <label
+                    style={
+                      labelStyle
+                    }
+                  >
+                    Overall Impact Level
+                  </label>
+
+                  <select
+                    value={
+                      analysisImpactLevel
+                    }
+                    onChange={
+                      (event) =>
+                        setAnalysisImpactLevel(
+                          event.target
+                            .value as
+                            ImpactLevel
+                        )
+                    }
+                    disabled={
+                      (
+                        selectedAnalysisId
+                        !== null
+                        && !isAnalysisEditable
+                      )
+                      || isSavingAnalysis
+                    }
+                    style={
+                      inputStyle
+                    }
+                  >
+                    <option value="none">
+                      None
+                    </option>
+
+                    <option value="low">
+                      Low
+                    </option>
+
+                    <option value="moderate">
+                      Moderate
+                    </option>
+
+                    <option value="high">
+                      High
+                    </option>
+
+                    <option value="critical">
+                      Critical
+                    </option>
+                  </select>
+                </div>
+              </div>
+
+
+              <div
+                style={{
+                  marginTop:
+                    "18px",
+                }}
+              >
+                <label
+                  style={
+                    labelStyle
+                  }
+                >
+                  Analysis Method
+                </label>
+
+                <input
+                  type="text"
+                  value={
+                    analysisMethod
+                  }
+                  onChange={
+                    (event) =>
+                      setAnalysisMethod(
+                        event.target.value
+                      )
+                  }
+                  disabled={
+                    (
+                      selectedAnalysisId
+                      !== null
+                      && !isAnalysisEditable
+                    )
+                    || isSavingAnalysis
+                  }
+                  placeholder={
+                    "Describe the regulatory "
+                    + "analysis method..."
+                  }
+                  style={
+                    inputStyle
+                  }
+                />
+              </div>
+
+
+              {
+                analysisOrigin
+                !== "human"
+                && (
+                  <div
+                    style={{
+                      marginTop:
+                        "18px",
+                    }}
+                  >
+                    <label
+                      style={
+                        labelStyle
+                      }
+                    >
+                      Generated By Model
+                    </label>
+
+                    <input
+                      type="text"
+                      value={
+                        generatedByModel
+                      }
+                      onChange={
+                        (event) =>
+                          setGeneratedByModel(
+                            event.target.value
+                          )
+                      }
+                      disabled={
+                        Boolean(
+                          selectedAnalysisId
+                        )
+                        || isSavingAnalysis
+                      }
+                      placeholder={
+                        "Model name and version..."
+                      }
+                      style={
+                        inputStyle
+                      }
+                    />
+                  </div>
+                )
+              }
+
+
+              <div
+                style={{
+                  marginTop:
+                    "18px",
+                }}
+              >
+                <label
+                  style={
+                    labelStyle
+                  }
+                >
+                  Executive Summary
+                </label>
+
+                <textarea
+                  value={
+                    executiveSummary
+                  }
+                  onChange={
+                    (event) =>
+                      setExecutiveSummary(
+                        event.target.value
+                      )
+                  }
+                  disabled={
+                    (
+                      selectedAnalysisId
+                      !== null
+                      && !isAnalysisEditable
+                    )
+                    || isSavingAnalysis
+                  }
+                  placeholder={
+                    "Summarise the regulatory "
+                    + "change, legal significance "
+                    + "and expected organisational "
+                    + "impact..."
+                  }
+                  rows={
+                    7
+                  }
+                  style={{
+                    ...inputStyle,
+
+                    resize:
+                      "vertical",
+
+                    lineHeight:
+                      1.6,
+                  }}
+                />
+              </div>
+
+
+                          {
+                selectedAnalysisId
+                && knowledgePack
+                && (
+                  <div
+                    style={{
+                      marginTop:
+                        "24px",
+
+                      paddingTop:
+                        "22px",
+
+                      borderTop:
+                        "1px solid #e2e8f0",
+                    }}
+                  >
+                    <div
+                      style={{
+                        marginBottom:
+                          "18px",
+                      }}
+                    >
+                      <h3
+                        style={{
+                          margin:
+                            "0 0 6px",
+
+                          fontSize:
+                            "18px",
+                        }}
+                      >
+                        Affected Regulatory Provision
+                      </h3>
+
+                      <p
+                        style={{
+                          margin:
+                            0,
+
+                          color:
+                            "#64748b",
+
+                          fontSize:
+                            "13px",
+
+                          lineHeight:
+                            1.6,
+                        }}
+                      >
+                        Map this regulatory change
+                        to the canonical Article,
+                        obligation and associated
+                        TrustGRC controls.
+                      </p>
+                    </div>
+
+
+                    <div
+                      style={{
+                        display:
+                          "grid",
+
+                        gridTemplateColumns:
+                          "repeat(auto-fit, minmax(260px, 1fr))",
+
+                        gap:
+                          "18px",
+                      }}
+                    >
+                      <div>
+                        <label
+                          style={
+                            labelStyle
+                          }
+                        >
+                          Canonical Regulation
+                        </label>
+
+                        <input
+                          type="text"
+                          value={
+                            knowledgePack.regulation
+                              .short_name
+                            ?? knowledgePack.regulation
+                              .name
+                          }
+                          disabled
+                          style={{
+                            ...inputStyle,
+
+                            backgroundColor:
+                              "#f8fafc",
+                          }}
+                        />
+                      </div>
+
+
+                      <div>
+                        <label
+                          style={
+                            labelStyle
+                          }
+                        >
+                          Article / Provision
+                        </label>
+
+                        <select
+                          value={
+                            selectedArticleId
+                            ?? ""
+                          }
+                          onChange={
+                            (event) => {
+                              const articleId =
+                                Number(
+                                  event.target.value
+                                );
+
+                              setSelectedArticleId(
+                                Number.isInteger(
+                                  articleId
+                                )
+                                  && articleId > 0
+                                  ? articleId
+                                  : null
+                              );
+                            }
+                          }
+                          disabled={
+                            !isAnalysisEditable
+                            || isSavingProvision
+                          }
+                          style={
+                            inputStyle
+                          }
+                        >
+                          {
+                            knowledgePack.articles.map(
+                              (
+                                article
+                              ) => (
+                                <option
+                                  key={
+                                    article.id
+                                  }
+                                  value={
+                                    article.id
+                                  }
+                                >
+                                  {
+                                    article.article_number
+                                    + (
+                                      article.title
+                                        ? ` — ${article.title}`
+                                        : ""
+                                    )
+                                  }
+                                </option>
+                              )
+                            )
+                          }
+                        </select>
+                      </div>
+                    </div>
+
+
+                    {
+                      selectedArticle
+                      && (
+                        <div
+                          style={{
+                            marginTop:
+                              "14px",
+
+                            padding:
+                              "14px",
+
+                            border:
+                              "1px solid #e2e8f0",
+
+                            borderRadius:
+                              "9px",
+
+                            backgroundColor:
+                              "#f8fafc",
+                          }}
+                        >
+                          <InfoItem
+                            label="Article / Provision"
+                            value={
+                              selectedArticle
+                                .article_number
+                            }
+                          />
+
+                          <InfoItem
+                            label="Title"
+                            value={
+                              selectedArticle.title
+                              ?? "Not available"
+                            }
+                          />
+
+                          <InfoItem
+                            label="Version"
+                            value={
+                              selectedArticle.version
+                              ?? "Not available"
+                            }
+                          />
+
+                          {
+                            selectedArticle.summary
+                            && (
+                              <InfoItem
+                                label="Canonical Summary"
+                                value={
+                                  selectedArticle.summary
+                                }
+                              />
+                            )
+                          }
+                        </div>
+                      )
+                    }
+
+
+                    <div
+                      style={{
+                        marginTop:
+                          "18px",
+                      }}
+                    >
+                      <label
+                        style={
+                          labelStyle
+                        }
+                      >
+                        Regulatory Obligation
+                      </label>
+
+                      <select
+                        value={
+                          selectedObligationId
+                          ?? ""
+                        }
+                        onChange={
+                          (event) => {
+                            const obligationId =
+                              Number(
+                                event.target.value
+                              );
+
+                            setSelectedObligationId(
+                              Number.isInteger(
+                                obligationId
+                              )
+                                && obligationId > 0
+                                ? obligationId
+                                : null
+                            );
+                          }
+                        }
+                        disabled={
+                          !isAnalysisEditable
+                          || isSavingProvision
+                          || !selectedArticle
+                        }
+                        style={
+                          inputStyle
+                        }
+                      >
+                        {
+                          selectedArticle
+                          && selectedArticle
+                            .obligations.length
+                            > 0
+                            ? selectedArticle
+                                .obligations.map(
+                                  (
+                                    obligation
+                                  ) => (
+                                    <option
+                                      key={
+                                        obligation.id
+                                      }
+                                      value={
+                                        obligation.id
+                                      }
+                                    >
+                                      {
+                                        obligation
+                                          .obligation_code
+                                      }
+                                    </option>
+                                  )
+                                )
+                            : (
+                              <option
+                                value=""
+                              >
+                                No mapped obligations
+                              </option>
+                            )
+                        }
+                      </select>
+                    </div>
+
+
+                    {
+                      selectedObligation
+                      && (
+                        <div
+                          style={{
+                            marginTop:
+                              "14px",
+
+                            padding:
+                              "14px",
+
+                            border:
+                              "1px solid #e2e8f0",
+
+                            borderRadius:
+                              "9px",
+
+                            backgroundColor:
+                              "#f8fafc",
+                          }}
+                        >
+                          <InfoItem
+                            label="Obligation Code"
+                            value={
+                              selectedObligation
+                                .obligation_code
+                            }
+                          />
+
+                          <InfoItem
+                            label="Requirement"
+                            value={
+                              selectedObligation
+                                .obligation_text
+                            }
+                          />
+
+                          <InfoItem
+                            label="Obligation Type"
+                            value={
+                              selectedObligation
+                                .obligation_type
+                              ?? "Not available"
+                            }
+                          />
+
+                          <InfoItem
+                            label="Risk Level"
+                            value={
+                              selectedObligation
+                                .risk_level
+                              ?? "Not available"
+                            }
+                          />
+
+                          <InfoItem
+                            label="Mandatory"
+                            value={
+                              selectedObligation
+                                .mandatory
+                                ? "Yes"
+                                : "No"
+                            }
+                          />
+                        </div>
+                      )
+                    }
+
+
+                    <div
+                      style={{
+                        marginTop:
+                          "18px",
+                      }}
+                    >
+                      <div
+                        style={
+                          labelStyle
+                        }
+                      >
+                        Associated Controls
+                      </div>
+
+                      {
+                        selectedObligationControls
+                          .length === 0
+                          ? (
+                            <div
+                              style={{
+                                padding:
+                                  "14px",
+
+                                border:
+                                  "1px solid #e2e8f0",
+
+                                borderRadius:
+                                  "9px",
+
+                                backgroundColor:
+                                  "#f8fafc",
+
+                                color:
+                                  "#64748b",
+
+                                fontSize:
+                                  "13px",
+                              }}
+                            >
+                              No controls are mapped
+                              to the selected
+                              obligation.
+                            </div>
+                          )
+                          : (
+                            <div
+                              style={{
+                                display:
+                                  "grid",
+
+                                gap:
+                                  "10px",
+                              }}
+                            >
+                              {
+                                selectedObligationControls.map(
+                                  (
+                                    control
+                                  ) => (
+                                    <div
+                                      key={
+                                        control.id
+                                      }
+                                      style={{
+                                        padding:
+                                          "14px",
+
+                                        border:
+                                          "1px solid #e2e8f0",
+
+                                        borderRadius:
+                                          "9px",
+
+                                        backgroundColor:
+                                          "#f8fafc",
+                                      }}
+                                    >
+                                      <div
+                                        style={{
+                                          color:
+                                            "#0f172a",
+
+                                          fontSize:
+                                            "13px",
+
+                                          fontWeight:
+                                            800,
+                                        }}
+                                      >
+                                        {
+                                          control.control_code
+                                          + " — "
+                                          + control.control_name
+                                        }
+                                      </div>
+
+                                      {
+                                        control.control_description
+                                        && (
+                                          <div
+                                            style={{
+                                              marginTop:
+                                                "6px",
+
+                                              color:
+                                                "#475569",
+
+                                              fontSize:
+                                                "13px",
+
+                                              lineHeight:
+                                                1.6,
+                                            }}
+                                          >
+                                            {
+                                              control
+                                                .control_description
+                                            }
+                                          </div>
+                                        )
+                                      }
+
+                                      {
+                                        control.evidence_required
+                                        && (
+                                          <div
+                                            style={{
+                                              marginTop:
+                                                "8px",
+                                            }}
+                                          >
+                                            <InfoItem
+                                              label="Evidence Required"
+                                              value={
+                                                control
+                                                  .evidence_required
+                                              }
+                                            />
+                                          </div>
+                                        )
+                                      }
+                                    </div>
+                                  )
+                                )
+                              }
+                            </div>
+                          )
+                      }
+                    </div>
+                    
+
+                                        <div
+                      style={{
+                        marginTop:
+                          "22px",
+
+                        paddingTop:
+                          "20px",
+
+                        borderTop:
+                          "1px solid #e2e8f0",
+                      }}
+                    >
+                      <h3
+                        style={{
+                          margin:
+                            "0 0 16px",
+
+                          fontSize:
+                            "17px",
+                        }}
+                      >
+                        Provision Impact Assessment
+                      </h3>
+
+
+                      <div
+                        style={{
+                          display:
+                            "grid",
+
+                          gridTemplateColumns:
+                            "repeat(auto-fit, minmax(240px, 1fr))",
+
+                          gap:
+                            "18px",
+                        }}
+                      >
+                        <div>
+                          <label
+                            style={
+                              labelStyle
+                            }
+                          >
+                            Change Type
+                          </label>
+
+                          <select
+                            value={
+                              provisionChangeType
+                            }
+                            onChange={
+                              (event) =>
+                                setProvisionChangeType(
+                                  event.target
+                                    .value as
+                                    ChangeType
+                                )
+                            }
+                            disabled={
+                              !isAnalysisEditable
+                              || isSavingProvision
+                            }
+                            style={
+                              inputStyle
+                            }
+                          >
+                            <option value="editorial">
+                              Editorial
+                            </option>
+
+                            <option value="guidance_change">
+                              Guidance Change
+                            </option>
+
+                            <option value="scope_change">
+                              Scope Change
+                            </option>
+
+                            <option value="obligation_change">
+                              Obligation Change
+                            </option>
+
+                            <option value="enforcement_change">
+                              Enforcement Change
+                            </option>
+
+                            <option value="effective_date_change">
+                              Effective Date Change
+                            </option>
+
+                            <option value="other">
+                              Other
+                            </option>
+                          </select>
+                        </div>
+
+
+                        <div>
+                          <label
+                            style={
+                              labelStyle
+                            }
+                          >
+                            Impact Level
+                          </label>
+
+                          <select
+                            value={
+                              provisionImpactLevel
+                            }
+                            onChange={
+                              (event) =>
+                                setProvisionImpactLevel(
+                                  event.target
+                                    .value as
+                                    ImpactLevel
+                                )
+                            }
+                            disabled={
+                              !isAnalysisEditable
+                              || isSavingProvision
+                            }
+                            style={
+                              inputStyle
+                            }
+                          >
+                            <option value="none">
+                              None
+                            </option>
+
+                            <option value="low">
+                              Low
+                            </option>
+
+                            <option value="moderate">
+                              Moderate
+                            </option>
+
+                            <option value="high">
+                              High
+                            </option>
+
+                            <option value="critical">
+                              Critical
+                            </option>
+                          </select>
+                        </div>
+                      </div>
+
+
+                      <div
+                        style={{
+                          marginTop:
+                            "18px",
+                        }}
+                      >
+                        <label
+                          style={
+                            labelStyle
+                          }
+                        >
+                          Previous Requirement
+                        </label>
+
+                        <textarea
+                          value={
+                            previousRequirement
+                          }
+                          onChange={
+                            (event) =>
+                              setPreviousRequirement(
+                                event.target.value
+                              )
+                          }
+                          disabled={
+                            !isAnalysisEditable
+                            || isSavingProvision
+                          }
+                          rows={
+                            4
+                          }
+                          placeholder={
+                            "Document the previous "
+                            + "requirement where known..."
+                          }
+                          style={{
+                            ...inputStyle,
+
+                            resize:
+                              "vertical",
+
+                            lineHeight:
+                              1.6,
+                          }}
+                        />
+                      </div>
+
+
+                      <div
+                        style={{
+                          marginTop:
+                            "18px",
+                        }}
+                      >
+                        <label
+                          style={
+                            labelStyle
+                          }
+                        >
+                          Current Requirement
+                        </label>
+
+                        <textarea
+                          value={
+                            currentRequirement
+                          }
+                          onChange={
+                            (event) =>
+                              setCurrentRequirement(
+                                event.target.value
+                              )
+                          }
+                          disabled={
+                            !isAnalysisEditable
+                            || isSavingProvision
+                          }
+                          rows={
+                            4
+                          }
+                          placeholder={
+                            selectedObligation
+                              ? selectedObligation
+                                  .obligation_text
+                              : (
+                                  "Document the current "
+                                  + "regulatory requirement..."
+                                )
+                          }
+                          style={{
+                            ...inputStyle,
+
+                            resize:
+                              "vertical",
+
+                            lineHeight:
+                              1.6,
+                          }}
+                        />
+                      </div>
+
+
+                      <div
+                        style={{
+                          marginTop:
+                            "18px",
+                        }}
+                      >
+                        <label
+                          style={
+                            labelStyle
+                          }
+                        >
+                          Change Explanation *
+                        </label>
+
+                        <textarea
+                          value={
+                            changeExplanation
+                          }
+                          onChange={
+                            (event) =>
+                              setChangeExplanation(
+                                event.target.value
+                              )
+                          }
+                          disabled={
+                            !isAnalysisEditable
+                            || isSavingProvision
+                          }
+                          rows={
+                            5
+                          }
+                          placeholder={
+                            "Explain what changed "
+                            + "and why the selected "
+                            + "provision is affected..."
+                          }
+                          style={{
+                            ...inputStyle,
+
+                            resize:
+                              "vertical",
+
+                            lineHeight:
+                              1.6,
+                          }}
+                        />
+                      </div>
+
+
+                      <div
+                        style={{
+                          marginTop:
+                            "18px",
+                        }}
+                      >
+                        <label
+                          style={
+                            labelStyle
+                          }
+                        >
+                          Legal Interpretation
+                        </label>
+
+                        <textarea
+                          value={
+                            legalInterpretation
+                          }
+                          onChange={
+                            (event) =>
+                              setLegalInterpretation(
+                                event.target.value
+                              )
+                          }
+                          disabled={
+                            !isAnalysisEditable
+                            || isSavingProvision
+                          }
+                          rows={
+                            4
+                          }
+                          placeholder={
+                            "Document the legal or "
+                            + "regulatory interpretation..."
+                          }
+                          style={{
+                            ...inputStyle,
+
+                            resize:
+                              "vertical",
+
+                            lineHeight:
+                              1.6,
+                          }}
+                        />
+                      </div>
+
+
+                      <div
+                        style={{
+                          marginTop:
+                            "18px",
+                        }}
+                      >
+                        <label
+                          style={
+                            labelStyle
+                          }
+                        >
+                          Operational Impact
+                        </label>
+
+                        <textarea
+                          value={
+                            operationalImpact
+                          }
+                          onChange={
+                            (event) =>
+                              setOperationalImpact(
+                                event.target.value
+                              )
+                          }
+                          disabled={
+                            !isAnalysisEditable
+                            || isSavingProvision
+                          }
+                          rows={
+                            4
+                          }
+                          placeholder={
+                            "Describe the operational "
+                            + "impact on governance, "
+                            + "controls, systems or "
+                            + "processes..."
+                          }
+                          style={{
+                            ...inputStyle,
+
+                            resize:
+                              "vertical",
+
+                            lineHeight:
+                              1.6,
+                          }}
+                        />
+                      </div>
+
+
+                      <div
+                        style={{
+                          marginTop:
+                            "18px",
+                        }}
+                      >
+                        <label
+                          style={
+                            labelStyle
+                          }
+                        >
+                          Recommended Action
+                        </label>
+
+                        <textarea
+                          value={
+                            recommendedAction
+                          }
+                          onChange={
+                            (event) =>
+                              setRecommendedAction(
+                                event.target.value
+                              )
+                          }
+                          disabled={
+                            !isAnalysisEditable
+                            || isSavingProvision
+                          }
+                          rows={
+                            4
+                          }
+                          placeholder={
+                            "Document the recommended "
+                            + "compliance or governance "
+                            + "action..."
+                          }
+                          style={{
+                            ...inputStyle,
+
+                            resize:
+                              "vertical",
+
+                            lineHeight:
+                              1.6,
+                          }}
+                        />
+                      </div>
+
+
+                      <div
+                        style={{
+                          marginTop:
+                            "20px",
+
+                          display:
+                            "flex",
+
+                          justifyContent:
+                            "flex-end",
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={
+                            () => {
+                              void handleCreateProvisionImpact();
+                            }
+                          }
+                          disabled={
+                            !isAnalysisEditable
+                            || isSavingProvision
+                            || !selectedArticle
+                          }
+                          style={{
+                            ...primaryButtonStyle,
+
+                            backgroundColor:
+                              (
+                                !isAnalysisEditable
+                                || isSavingProvision
+                                || !selectedArticle
+                              )
+                                ? "#94a3b8"
+                                : "#2563eb",
+
+                            cursor:
+                              (
+                                !isAnalysisEditable
+                                || isSavingProvision
+                                || !selectedArticle
+                              )
+                                ? "not-allowed"
+                                : "pointer",
+                          }}
+                        >
+                          {
+                            isSavingProvision
+                              ? "Saving Provision Impact..."
+                              : "Add Provision Impact"
+                          }
+                        </button>
+                      </div>
+                    </div>  
+
+
+                  </div>
+                )
+              }
+
+              {
+                analysisDetail
+                && (
+                  <div
+                    style={{
+                      marginTop:
+                        "20px",
+
+                      display:
+                        "grid",
+
+                      gridTemplateColumns:
+                        "repeat(auto-fit, minmax(190px, 1fr))",
+
+                      gap:
+                        "14px",
+                    }}
+                  >
+                    <InfoItem
+                      label="Provision Impacts"
+                      value={
+                        String(
+                          analysisDetail
+                            .provision_count
+                        )
+                      }
+                    />
+
+                    <InfoItem
+                      label="Validated Provisions"
+                      value={
+                        String(
+                          analysisDetail
+                            .validated_provision_count
+                        )
+                      }
+                    />
+
+                    <InfoItem
+                      label="Affected Controls"
+                      value={
+                        String(
+                          analysisDetail
+                            .affected_control_count
+                        )
+                      }
+                    />
+
+                    <InfoItem
+                      label="Supersedes"
+                      value={
+                        analysisDetail
+                          .analysis
+                          .supersedes_analysis_id
+                          ? (
+                              `Analysis #`
+                              + `${analysisDetail
+                                .analysis
+                                .supersedes_analysis_id}`
+                            )
+                          : "None"
+                      }
+                    />
+                  </div>
+                )
+              }
+
+              {
+                analysisDetail
+                && analysisDetail
+                  .provision_impacts
+                  .length > 0
+                && (
+                  <div
+                    style={{
+                      marginTop:
+                        "24px",
+
+                      paddingTop:
+                        "22px",
+
+                      borderTop:
+                        "1px solid #e2e8f0",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display:
+                          "flex",
+
+                        justifyContent:
+                          "space-between",
+
+                        alignItems:
+                          "center",
+
+                        gap:
+                          "12px",
+
+                        flexWrap:
+                          "wrap",
+
+                        marginBottom:
+                          "16px",
+                      }}
+                    >
+                      <div>
+                        <h3
+                          style={{
+                            margin:
+                              "0 0 5px",
+
+                            fontSize:
+                              "18px",
+                          }}
+                        >
+                          Saved Provision Impacts
+                        </h3>
+
+                        <p
+                          style={{
+                            margin:
+                              0,
+
+                            color:
+                              "#64748b",
+
+                            fontSize:
+                              "13px",
+
+                            lineHeight:
+                              1.6,
+                          }}
+                        >
+                          Review the persisted
+                          Article-level impact
+                          assessments before
+                          validating this structured
+                          analysis.
+                        </p>
+                      </div>
+
+                      <StatusBadge
+                        text={
+                          `${analysisDetail.provision_count} `
+                          + (
+                            analysisDetail.provision_count
+                            === 1
+                              ? "Provision"
+                              : "Provisions"
+                          )
+                        }
+                        tone="neutral"
+                      />
+                    </div>
+
+
+                    <div
+                      style={{
+                        display:
+                          "grid",
+
+                        gap:
+                          "16px",
+                      }}
+                    >
+                      {
+                        analysisDetail
+                          .provision_impacts
+                          .map(
+                            (
+                              detail
+                            ) => {
+                              const impact =
+                                detail.impact;
+
+                              return (
+                                <div
+                                  key={
+                                    impact.id
+                                  }
+                                  style={{
+                                    padding:
+                                      "18px",
+
+                                    border:
+                                      "1px solid #e2e8f0",
+
+                                    borderRadius:
+                                      "10px",
+
+                                    backgroundColor:
+                                      "#f8fafc",
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      display:
+                                        "flex",
+
+                                      justifyContent:
+                                        "space-between",
+
+                                      alignItems:
+                                        "flex-start",
+
+                                      gap:
+                                        "12px",
+
+                                      flexWrap:
+                                        "wrap",
+
+                                      marginBottom:
+                                        "16px",
+                                    }}
+                                  >
+                                    <div>
+                                      <div
+                                        style={{
+                                          color:
+                                            "#0f172a",
+
+                                          fontSize:
+                                            "15px",
+
+                                          fontWeight:
+                                            800,
+                                        }}
+                                      >
+                                        {
+                                          detail.article
+                                            ? (
+                                                detail.article
+                                                  .article_number
+                                                + (
+                                                  detail.article
+                                                    .title
+                                                    ? (
+                                                        " — "
+                                                        + detail.article
+                                                          .title
+                                                      )
+                                                    : ""
+                                                )
+                                              )
+                                            : impact
+                                                .provision_reference
+                                        }
+                                      </div>
+
+                                      {
+                                        detail.obligation
+                                        && (
+                                          <div
+                                            style={{
+                                              marginTop:
+                                                "5px",
+
+                                              color:
+                                                "#64748b",
+
+                                              fontSize:
+                                                "12px",
+                                            }}
+                                          >
+                                            {
+                                              detail.obligation
+                                                .obligation_code
+                                            }
+                                          </div>
+                                        )
+                                      }
+                                    </div>
+
+
+                                    <StatusBadge
+                                      text={
+                                        formatStatus(
+                                          impact.review_status
+                                        )
+                                      }
+                                      tone={
+                                        impact.review_status
+                                        === "validated"
+                                          ? "success"
+                                          : impact.review_status
+                                            === "rejected"
+                                            ? "neutral"
+                                            : "warning"
+                                      }
+                                    />
+                                  </div>
+
+
+                                  <div
+                                    style={{
+                                      display:
+                                        "grid",
+
+                                      gridTemplateColumns:
+                                        "repeat(auto-fit, minmax(180px, 1fr))",
+
+                                      gap:
+                                        "14px",
+                                    }}
+                                  >
+                                    <InfoItem
+                                      label="Change Type"
+                                      value={
+                                        formatStatus(
+                                          impact.change_type
+                                        )
+                                      }
+                                    />
+
+                                    <InfoItem
+                                      label="Impact Level"
+                                      value={
+                                        impact.impact_level
+                                          ? formatStatus(
+                                              impact.impact_level
+                                            )
+                                          : "Not available"
+                                      }
+                                    />
+
+                                    <InfoItem
+                                      label="Provision Reference"
+                                      value={
+                                        impact
+                                          .provision_reference
+                                      }
+                                    />
+
+                                    <InfoItem
+                                      label="Review Status"
+                                      value={
+                                        formatStatus(
+                                          impact.review_status
+                                        )
+                                      }
+                                    />
+                                  </div>
+
+
+                                  {
+                                    impact.previous_requirement
+                                    && (
+                                      <div
+                                        style={{
+                                          marginTop:
+                                            "14px",
+                                        }}
+                                      >
+                                        <InfoItem
+                                          label="Previous Requirement"
+                                          value={
+                                            impact
+                                              .previous_requirement
+                                          }
+                                        />
+                                      </div>
+                                    )
+                                  }
+
+
+                                  {
+                                    impact.current_requirement
+                                    && (
+                                      <div
+                                        style={{
+                                          marginTop:
+                                            "10px",
+                                        }}
+                                      >
+                                        <InfoItem
+                                          label="Current Requirement"
+                                          value={
+                                            impact
+                                              .current_requirement
+                                          }
+                                        />
+                                      </div>
+                                    )
+                                  }
+
+
+                                  {
+                                    impact.change_explanation
+                                    && (
+                                      <div
+                                        style={{
+                                          marginTop:
+                                            "10px",
+                                        }}
+                                      >
+                                        <InfoItem
+                                          label="Change Explanation"
+                                          value={
+                                            impact
+                                              .change_explanation
+                                          }
+                                        />
+                                      </div>
+                                    )
+                                  }
+
+
+                                  {
+                                    impact.legal_interpretation
+                                    && (
+                                      <div
+                                        style={{
+                                          marginTop:
+                                            "10px",
+                                        }}
+                                      >
+                                        <InfoItem
+                                          label="Legal Interpretation"
+                                          value={
+                                            impact
+                                              .legal_interpretation
+                                          }
+                                        />
+                                      </div>
+                                    )
+                                  }
+
+
+                                  {
+                                    impact.operational_impact
+                                    && (
+                                      <div
+                                        style={{
+                                          marginTop:
+                                            "10px",
+                                        }}
+                                      >
+                                        <InfoItem
+                                          label="Operational Impact"
+                                          value={
+                                            impact
+                                              .operational_impact
+                                          }
+                                        />
+                                      </div>
+                                    )
+                                  }
+
+
+                                  {
+                                    impact.recommended_action
+                                    && (
+                                      <div
+                                        style={{
+                                          marginTop:
+                                            "10px",
+                                        }}
+                                      >
+                                        <InfoItem
+                                          label="Recommended Action"
+                                          value={
+                                            impact
+                                              .recommended_action
+                                          }
+                                        />
+                                      </div>
+                                    )
+                                  }
+
+
+                                  {
+                                    detail.controls.length > 0
+                                    && (
+                                      <div
+                                        style={{
+                                          marginTop:
+                                            "16px",
+
+                                          paddingTop:
+                                            "14px",
+
+                                          borderTop:
+                                            "1px solid #e2e8f0",
+                                        }}
+                                      >
+                                        <div
+                                          style={
+                                            smallLabelStyle
+                                          }
+                                        >
+                                          Affected Controls
+                                        </div>
+
+                                        <div
+                                          style={{
+                                            marginTop:
+                                              "8px",
+
+                                            display:
+                                              "grid",
+
+                                            gap:
+                                              "8px",
+                                          }}
+                                        >
+                                          {
+                                            detail.controls.map(
+                                              (
+                                                control
+                                              ) => (
+                                                <div
+                                                  key={
+                                                    control.id
+                                                  }
+                                                  style={{
+                                                    padding:
+                                                      "10px 12px",
+
+                                                    border:
+                                                      "1px solid #e2e8f0",
+
+                                                    borderRadius:
+                                                      "8px",
+
+                                                    backgroundColor:
+                                                      "#ffffff",
+                                                  }}
+                                                >
+                                                  <div
+                                                    style={{
+                                                      color:
+                                                        "#0f172a",
+
+                                                      fontSize:
+                                                        "12px",
+
+                                                      fontWeight:
+                                                        800,
+                                                    }}
+                                                  >
+                                                    {
+                                                      control
+                                                        .control_code
+                                                      + " — "
+                                                      + control
+                                                        .control_name
+                                                    }
+                                                  </div>
+
+                                                  {
+                                                    control
+                                                      .control_description
+                                                    && (
+                                                      <div
+                                                        style={{
+                                                          marginTop:
+                                                            "5px",
+
+                                                          color:
+                                                            "#64748b",
+
+                                                          fontSize:
+                                                            "12px",
+
+                                                          lineHeight:
+                                                            1.5,
+                                                        }}
+                                                      >
+                                                        {
+                                                          control
+                                                            .control_description
+                                                        }
+                                                      </div>
+                                                    )
+                                                  }
+                                                </div>
+                                              )
+                                            )
+                                          }
+                                        </div>
+                                      </div>
+                                    )
+                                  }
+
+
+                                  {
+                                    impact.source_url
+                                    && (
+                                      <div
+                                        style={{
+                                          marginTop:
+                                            "14px",
+                                        }}
+                                      >
+                                        <a
+                                          href={
+                                            impact.source_url
+                                          }
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          style={{
+                                            color:
+                                              "#2563eb",
+
+                                            fontSize:
+                                              "12px",
+
+                                            fontWeight:
+                                              700,
+
+                                            textDecoration:
+                                              "none",
+                                          }}
+                                        >
+                                          Open Provision Source ↗
+                                        </a>
+                                      </div>
+                                    )
+                                  }
+                                </div>
+                              );
+                            }
+                          )
+                      }
+                    </div>
+                  </div>
+                )
+              }
+
+
+                            {
+                analysisDetail
+                && analysisDetail.provision_count > 0
+                && (
+                  <div
+                    style={{
+                      marginTop:
+                        "24px",
+
+                      paddingTop:
+                        "22px",
+
+                      borderTop:
+                        "1px solid #e2e8f0",
+                    }}
+                  >
+                    <div
+                      style={{
+                        marginBottom:
+                          "16px",
+                      }}
+                    >
+                      <h3
+                        style={{
+                          margin:
+                            "0 0 6px",
+
+                          fontSize:
+                            "18px",
+                        }}
+                      >
+                        Structured Analysis Validation
+                      </h3>
+
+                      <p
+                        style={{
+                          margin:
+                            0,
+
+                          color:
+                            "#64748b",
+
+                          fontSize:
+                            "13px",
+
+                          lineHeight:
+                            1.6,
+                        }}
+                      >
+                        Validate the completed
+                        provision-level assessment
+                        before publication.
+                      </p>
+                    </div>
+
+
+                    {
+                      isAnalysisEditable
+                        ? (
+                          <>
+                            <div>
+                              <label
+                                style={
+                                  labelStyle
+                                }
+                              >
+                                Validation Notes
+                              </label>
+
+                              <textarea
+                                value={
+                                  validationNotes
+                                }
+                                onChange={
+                                  (event) =>
+                                    setValidationNotes(
+                                      event.target.value
+                                    )
+                                }
+                                disabled={
+                                  isValidatingAnalysis
+                                }
+                                rows={
+                                  5
+                                }
+                                placeholder={
+                                  "Document the basis "
+                                  + "for validating this "
+                                  + "structured regulatory "
+                                  + "analysis..."
+                                }
+                                style={{
+                                  ...inputStyle,
+
+                                  resize:
+                                    "vertical",
+
+                                  lineHeight:
+                                    1.6,
+                                }}
+                              />
+                            </div>
+
+
+                            <div
+                              style={{
+                                marginTop:
+                                  "18px",
+
+                                display:
+                                  "flex",
+
+                                justifyContent:
+                                  "flex-end",
+                              }}
+                            >
+                              <button
+                                type="button"
+                                onClick={
+                                  () => {
+                                    void handleValidateStructuredAnalysis();
+                                  }
+                                }
+                                disabled={
+                                  isValidatingAnalysis
+                                  || analysisDetail.provision_count < 1
+                                }
+                                style={{
+                                  ...primaryButtonStyle,
+
+                                  backgroundColor:
+                                    isValidatingAnalysis
+                                      ? "#94a3b8"
+                                      : "#16a34a",
+
+                                  cursor:
+                                    isValidatingAnalysis
+                                      ? "not-allowed"
+                                      : "pointer",
+                                }}
+                              >
+                                {
+                                  isValidatingAnalysis
+                                    ? "Validating Analysis..."
+                                    : "Validate Structured Analysis"
+                                }
+                              </button>
+                            </div>
+                          </>
+                        )
+                        : (
+                          <MessageBox
+                            tone="success"
+                          >
+                            This structured regulatory
+                            analysis is no longer editable.
+                            Current status:{" "}
+                            <strong>
+                              {
+                                formatStatus(
+                                  analysisDetail
+                                    .analysis
+                                    .analysis_status
+                                )
+                              }
+                            </strong>
+                            .
+                          </MessageBox>
+                        )
+                    }
+                  </div>
+                )
+              }
+
+              <div
+                style={{
+                  marginTop:
+                    "22px",
+
+                  display:
+                    "flex",
+
+                  justifyContent:
+                    "flex-end",
+
+                  gap:
+                    "12px",
+
+                  flexWrap:
+                    "wrap",
+                }}
+              >
+                {
+                  selectedAnalysis
+                  && (
+                    <button
+                      type="button"
+                      onClick={
+                        () => {
+                          void saveStructuredAnalysis(
+                            true
+                          );
+                        }
+                      }
+                      disabled={
+                        isSavingAnalysis
+                        || Boolean(
+                          change.published_at
+                        )
+                      }
+                      style={{
+                        ...secondaryButtonStyle,
+
+                        cursor:
+                          (
+                            isSavingAnalysis
+                            || Boolean(
+                              change.published_at
+                            )
+                          )
+                            ? "not-allowed"
+                            : "pointer",
+
+                        opacity:
+                          (
+                            isSavingAnalysis
+                            || Boolean(
+                              change.published_at
+                            )
+                          )
+                            ? 0.6
+                            : 1,
+                      }}
+                    >
+                      Create New Version
+                    </button>
+                  )
+                }
+
+
+                <button
+                  type="button"
+                  onClick={
+                    () => {
+                      void saveStructuredAnalysis(
+                        false
+                      );
+                    }
+                  }
+                  disabled={
+                    isSavingAnalysis
+                    || (
+                      selectedAnalysisId
+                      !== null
+                      && !isAnalysisEditable
+                    )
+                    || Boolean(
+                      change.published_at
+                    )
+                  }
+                  style={{
+                    ...primaryButtonStyle,
+
+                    backgroundColor:
+                      (
+                        isSavingAnalysis
+                        || (
+                          selectedAnalysisId
+                          !== null
+                          && !isAnalysisEditable
+                        )
+                        || Boolean(
+                          change.published_at
+                        )
+                      )
+                        ? "#94a3b8"
+                        : "#2563eb",
+
+                    cursor:
+                      (
+                        isSavingAnalysis
+                        || (
+                          selectedAnalysisId
+                          !== null
+                          && !isAnalysisEditable
+                        )
+                        || Boolean(
+                          change.published_at
+                        )
+                      )
+                        ? "not-allowed"
+                        : "pointer",
+                  }}
+                >
+                  {
+                    isSavingAnalysis
+                      ? "Saving Analysis..."
+                      : selectedAnalysisId
+                        ? "Update Analysis"
+                        : "Create Analysis Version 1"
+                  }
+                </button>
+              </div>
+            </SectionCard>
+          )
+        }
 
 
         {/* IMPACT ANALYSIS */}
@@ -3298,6 +7744,48 @@ function StatusBadge({
       {text}
     </span>
   );
+}
+
+function getApiErrorMessage(
+  data: ApiError,
+  fallbackMessage: string
+) {
+  if (
+    typeof data.detail
+    === "string"
+    && data.detail
+  ) {
+    return data.detail;
+  }
+
+  if (
+    Array.isArray(
+      data.detail
+    )
+  ) {
+    const messages =
+      data.detail
+        .map(
+          (
+            item
+          ) =>
+            item.msg
+        )
+        .filter(
+          Boolean
+        );
+
+    if (
+      messages.length
+      > 0
+    ) {
+      return messages.join(
+        " "
+      );
+    }
+  }
+
+  return fallbackMessage;
 }
 
 
