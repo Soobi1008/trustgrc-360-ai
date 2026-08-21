@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -698,6 +699,18 @@ export default function RegulatoryChangeReviewPage() {
   ] = useState(false);
 
   const [
+    editingProvisionImpactId,
+    setEditingProvisionImpactId,
+  ] = useState<
+    number | null
+  >(null);
+
+  const provisionImpactSectionRef =
+  useRef<HTMLDivElement | null>(
+    null
+  );
+
+  const [
     isValidatingAnalysis,
     setIsValidatingAnalysis,
   ] = useState(false);
@@ -831,6 +844,50 @@ export default function RegulatoryChangeReviewPage() {
   const [
     successMessage,
     setSuccessMessage,
+  ] = useState("");
+
+
+  const [
+    reviewErrorMessage,
+    setReviewErrorMessage,
+  ] = useState("");
+
+  const [
+    reviewSuccessMessage,
+    setReviewSuccessMessage,
+  ] = useState("");
+
+
+  const [
+    structuredErrorMessage,
+    setStructuredErrorMessage,
+  ] = useState("");
+
+  const [
+    structuredSuccessMessage,
+    setStructuredSuccessMessage,
+  ] = useState("");
+
+
+  const [
+    impactErrorMessage,
+    setImpactErrorMessage,
+  ] = useState("");
+
+  const [
+    impactSuccessMessage,
+    setImpactSuccessMessage,
+  ] = useState("");
+
+
+  const [
+    publicationErrorMessage,
+    setPublicationErrorMessage,
+  ] = useState("");
+
+  const [
+    publicationSuccessMessage,
+    setPublicationSuccessMessage,
   ] = useState("");
 
 
@@ -1719,11 +1776,20 @@ export default function RegulatoryChangeReviewPage() {
       reviewNotes.trim();
 
 
+    setReviewErrorMessage(
+      ""
+    );
+
+    setReviewSuccessMessage(
+      ""
+    );
+
+
     if (
       cleanedNotes.length
       < 10
     ) {
-      setErrorMessage(
+      setReviewErrorMessage(
         "Review notes must contain "
         + "at least 10 characters."
       );
@@ -1735,14 +1801,6 @@ export default function RegulatoryChangeReviewPage() {
     try {
       setIsSubmitting(
         true
-      );
-
-      setErrorMessage(
-        ""
-      );
-
-      setSuccessMessage(
-        ""
       );
 
 
@@ -1817,7 +1875,7 @@ export default function RegulatoryChangeReviewPage() {
         reviewDecision
         === "confirmed"
       ) {
-        setSuccessMessage(
+        setReviewSuccessMessage(
           "Regulatory change confirmed. "
           + "Impact analysis is now required."
         );
@@ -1826,13 +1884,13 @@ export default function RegulatoryChangeReviewPage() {
         reviewDecision
         === "dismissed"
       ) {
-        setSuccessMessage(
+        setReviewSuccessMessage(
           "Regulatory change dismissed "
           + "successfully."
         );
 
       } else {
-        setSuccessMessage(
+        setReviewSuccessMessage(
           "Regulatory change marked as "
           + "requiring more information."
         );
@@ -1847,7 +1905,7 @@ export default function RegulatoryChangeReviewPage() {
         error
       );
 
-      setErrorMessage(
+      setReviewErrorMessage(
         error instanceof Error
           ? error.message
           : (
@@ -1889,7 +1947,7 @@ export default function RegulatoryChangeReviewPage() {
       cleanedSummary.length
       < 10
     ) {
-      setErrorMessage(
+      setImpactErrorMessage(
         "Impact summary must contain "
         + "at least 10 characters."
       );
@@ -1903,7 +1961,7 @@ export default function RegulatoryChangeReviewPage() {
         .review_decision
       !== "confirmed"
     ) {
-      setErrorMessage(
+      setImpactErrorMessage(
         "Impact analysis can only be "
         + "completed after the regulatory "
         + "change has been confirmed."
@@ -1918,11 +1976,11 @@ export default function RegulatoryChangeReviewPage() {
         true
       );
 
-      setErrorMessage(
+      setImpactErrorMessage(
         ""
       );
 
-      setSuccessMessage(
+      setImpactSuccessMessage(
         ""
       );
 
@@ -1991,7 +2049,7 @@ export default function RegulatoryChangeReviewPage() {
         }
 
 
-      setSuccessMessage(
+      setImpactSuccessMessage(
         "Impact analysis completed "
         + "successfully. This regulatory "
         + "change is now eligible for "
@@ -2007,7 +2065,7 @@ export default function RegulatoryChangeReviewPage() {
         error
       );
 
-      setErrorMessage(
+      setImpactErrorMessage(
         error instanceof Error
           ? error.message
           : (
@@ -2084,7 +2142,7 @@ export default function RegulatoryChangeReviewPage() {
     }
 
     if (!isMappedSource) {
-      setErrorMessage(
+      setStructuredErrorMessage(
         "Structured analysis is unavailable "
         + "because this regulatory source is "
         + "not mapped to a canonical regulation."
@@ -2099,7 +2157,7 @@ export default function RegulatoryChangeReviewPage() {
       || evidence.change.review_decision
         !== "confirmed"
     ) {
-      setErrorMessage(
+      setStructuredErrorMessage(
         "Structured analysis requires a "
         + "completed and confirmed regulatory "
         + "review."
@@ -2117,11 +2175,19 @@ export default function RegulatoryChangeReviewPage() {
     const cleanedModel =
       generatedByModel.trim();
 
+    setStructuredErrorMessage(
+      ""
+    );
+
+    setStructuredSuccessMessage(
+      ""
+    );
+
     if (
       cleanedSummary.length > 0
       && cleanedSummary.length < 10
     ) {
-      setErrorMessage(
+      setStructuredErrorMessage(
         "Executive summary must contain "
         + "at least 10 characters when provided."
       );
@@ -2133,7 +2199,7 @@ export default function RegulatoryChangeReviewPage() {
       analysisOrigin !== "human"
       && !cleanedModel
     ) {
-      setErrorMessage(
+      setStructuredErrorMessage(
         "Generated-by model is required "
         + "for AI-assisted or system-generated "
         + "analysis."
@@ -2147,13 +2213,13 @@ export default function RegulatoryChangeReviewPage() {
         true
       );
 
-      setErrorMessage(
+      /*setStructuredErrorMessage(
         ""
       );
 
-      setSuccessMessage(
+      setStructuredSuccessMessage(
         ""
-      );
+      );*/
 
       const isCreating =
         createNewVersion
@@ -2291,7 +2357,7 @@ export default function RegulatoryChangeReviewPage() {
         );
       }
 
-      setSuccessMessage(
+      setStructuredSuccessMessage(
         isCreating
           ? (
             `Structured regulatory analysis version `
@@ -2311,7 +2377,7 @@ export default function RegulatoryChangeReviewPage() {
         error
       );
 
-      setErrorMessage(
+      setStructuredErrorMessage(
         error instanceof Error
           ? error.message
           : (
@@ -2483,7 +2549,7 @@ export default function RegulatoryChangeReviewPage() {
       || !knowledgePack
       || !selectedArticle
     ) {
-      setErrorMessage(
+      setStructuredErrorMessage(
         "Select an analysis and regulatory "
         + "Article before creating a "
         + "provision impact."
@@ -2496,7 +2562,7 @@ export default function RegulatoryChangeReviewPage() {
     if (
       !isAnalysisEditable
     ) {
-      setErrorMessage(
+      setStructuredErrorMessage(
         "The selected structured analysis "
         + "is read-only and cannot be modified."
       );
@@ -2509,11 +2575,21 @@ export default function RegulatoryChangeReviewPage() {
       changeExplanation.trim();
 
 
+    setStructuredErrorMessage(
+      ""
+    );
+
+
+    setStructuredSuccessMessage(
+      ""
+    );
+
+
     if (
       cleanedExplanation.length
       < 10
     ) {
-      setErrorMessage(
+      setStructuredErrorMessage(
         "Change explanation must contain "
         + "at least 10 characters."
       );
@@ -2538,13 +2614,13 @@ export default function RegulatoryChangeReviewPage() {
         true
       );
 
-      setErrorMessage(
+      /*setStructuredErrorMessage(
         ""
       );
 
-      setSuccessMessage(
+      setStructuredSuccessMessage(
         ""
-      );
+      );*/
 
 
       const response =
@@ -2683,7 +2759,7 @@ export default function RegulatoryChangeReviewPage() {
         };
 
 
-      setSuccessMessage(
+      setStructuredSuccessMessage(
         created.message
         || (
           "Regulatory provision impact "
@@ -2734,7 +2810,7 @@ export default function RegulatoryChangeReviewPage() {
         error
       );
 
-      setErrorMessage(
+      setStructuredErrorMessage(
         error instanceof Error
           ? error.message
           : (
@@ -2751,12 +2827,395 @@ export default function RegulatoryChangeReviewPage() {
   }
 
 
+  async function handleUpdateProvisionImpact() {
+   if (
+     !selectedAnalysisId
+     || !editingProvisionImpactId
+   ) {
+     setStructuredErrorMessage(
+       "Select a provision impact "
+       + "before updating it."
+     );
+
+     return;
+   }
+
+
+   if (
+     !isAnalysisEditable
+   ) {
+      setStructuredErrorMessage(
+       "The selected structured analysis "
+       + "is read-only and cannot be modified."
+     );
+
+     return;
+   }
+
+    const cleanedExplanation =
+     changeExplanation.trim();
+
+    setStructuredErrorMessage(
+      ""
+    );
+
+    setStructuredSuccessMessage(
+      ""
+    );
+
+
+   if (
+     cleanedExplanation.length
+     < 10
+   ) {
+     setStructuredErrorMessage(
+       "Change explanation must contain "
+       + "at least 10 characters."
+     );
+
+     return;
+   }
+
+
+   const token =
+     getToken();
+
+
+   if (
+     !token
+   ) {
+     return;
+   }
+
+
+   try {
+     setIsSavingProvision(
+       true
+     );
+
+
+     const response =
+       await fetch(
+         `${API_URL}/api/v1/regulatory-intelligence/changes/${changeId}/analyses/${selectedAnalysisId}/provision-impacts/${editingProvisionImpactId}`,
+         {
+           method:
+             "PATCH",
+
+           headers: {
+             Accept:
+               "application/json",
+
+             "Content-Type":
+               "application/json",
+
+             Authorization:
+               `Bearer ${token}`,
+           },
+
+           body:
+             JSON.stringify({
+               change_type:
+                 provisionChangeType,
+
+               previous_requirement:
+                 previousRequirement.trim()
+                 || null,
+
+               current_requirement:
+                 currentRequirement.trim()
+                 || null,
+
+               change_explanation:
+                 cleanedExplanation,
+
+               legal_interpretation:
+                 legalInterpretation.trim()
+                 || null,
+
+               operational_impact:
+                 operationalImpact.trim()
+                 || null,
+
+               recommended_action:
+                 recommendedAction.trim()
+                 || null,
+
+               impact_level:
+                 provisionImpactLevel,
+
+               source_snapshot_id:
+                 sourceSnapshotId,
+             }),
+         }
+       );
+
+
+     if (
+       response.status
+       === 401
+     ) {
+       clearAuthentication();
+
+       router.replace(
+         "/login"
+       );
+
+       return;
+     }
+
+
+     const data =
+       (
+         await response.json()
+       ) as
+         | RegulatoryProvisionImpact
+         | ApiError;
+
+
+     if (
+       !response.ok
+     ) {
+       throw new Error(
+         getApiErrorMessage(
+           data as ApiError,
+           "Unable to update regulatory "
+           + "provision impact."
+         )
+       );
+     }
+
+
+     setStructuredSuccessMessage(
+       "Regulatory provision impact "
+       + "updated successfully."
+     );
+
+
+     setEditingProvisionImpactId(
+       null
+     );
+
+
+     setPreviousRequirement(
+       ""
+     );
+
+     setCurrentRequirement(
+       ""
+     );
+
+     setChangeExplanation(
+       ""
+     );
+
+     setLegalInterpretation(
+       ""
+     );
+
+     setOperationalImpact(
+       ""
+     );
+
+     setRecommendedAction(
+       ""
+     );
+
+
+     await loadAnalyses(
+       token,
+       selectedAnalysisId
+     );
+
+
+     await loadAnalysisDetail(
+       token,
+       selectedAnalysisId
+     );
+
+   } catch (error) {
+     console.error(
+       "Provision impact update error:",
+       error
+     );
+
+     setStructuredErrorMessage(
+       error instanceof Error
+         ? error.message
+         : (
+             "Unable to update regulatory "
+             + "provision impact."
+           )
+     );
+
+   } finally {
+     setIsSavingProvision(
+       false
+     );
+   }
+ }
+
+
+  function beginEditProvisionImpact(
+    detail: RegulatoryProvisionImpactDetail
+  ) {
+    const impact =
+      detail.impact;
+
+    if (
+      !isAnalysisEditable
+    ) {
+      setStructuredErrorMessage(
+        "This structured analysis is read-only "
+        + "and its provision impacts cannot be edited."
+      );
+
+      return;
+    }
+
+
+    setEditingProvisionImpactId(
+      impact.id
+    );
+
+
+    setSelectedArticleId(
+      impact.regulation_article_id
+      ?? null
+    );
+
+    setSelectedObligationId(
+      impact.regulation_obligation_id
+      ?? null
+    );
+
+
+    setProvisionChangeType(
+      impact.change_type as
+        ChangeType
+    );
+
+    setProvisionImpactLevel(
+      (
+        impact.impact_level
+        ?? "moderate"
+      ) as ImpactLevel
+    );
+
+
+    setPreviousRequirement(
+      impact.previous_requirement
+      ?? ""
+    );
+
+    setCurrentRequirement(
+      impact.current_requirement
+      ?? ""
+    );
+
+    setChangeExplanation(
+      impact.change_explanation
+      ?? ""
+    );
+
+    setLegalInterpretation(
+      impact.legal_interpretation
+      ?? ""
+    );
+
+    setOperationalImpact(
+      impact.operational_impact
+      ?? ""
+    );
+
+    setRecommendedAction(
+      impact.recommended_action
+      ?? ""
+    );
+
+
+    setSourceSnapshotId(
+      impact.source_snapshot_id
+      ?? sourceSnapshotId
+    );
+
+
+    setStructuredErrorMessage(
+      ""
+    );
+
+    setStructuredSuccessMessage(
+      "Provision impact loaded for editing."
+    );
+
+
+    /*window.scrollTo({
+      top:
+        0,
+
+      behavior:
+        "smooth",
+    });
+  }*/
+    requestAnimationFrame(
+    () => {
+       provisionImpactSectionRef.current
+         ?.scrollIntoView({
+           behavior:
+             "smooth",
+
+             block:
+             "start",
+         });
+     }
+     );
+  }
+
+
+  function cancelEditProvisionImpact() {
+    setEditingProvisionImpactId(
+      null
+    );
+
+    setStructuredErrorMessage(
+      ""
+    );
+
+    setStructuredSuccessMessage(
+      ""
+    );
+
+    setPreviousRequirement(
+      ""
+    );
+
+    setCurrentRequirement(
+      ""
+    );
+
+    setChangeExplanation(
+      ""
+    );
+
+    setLegalInterpretation(
+      ""
+    );
+
+    setOperationalImpact(
+      ""
+    );
+
+    setRecommendedAction(
+      ""
+    );
+  }
+
+
   async function handleValidateStructuredAnalysis() {
     if (
       !selectedAnalysisId
       || !analysisDetail
     ) {
-      setErrorMessage(
+      setStructuredErrorMessage(
         "Select a structured analysis "
         + "before validation."
       );
@@ -2768,7 +3227,7 @@ export default function RegulatoryChangeReviewPage() {
     if (
       !isAnalysisEditable
     ) {
-      setErrorMessage(
+      setStructuredErrorMessage(
         "The selected structured analysis "
         + "is already locked and cannot "
         + "be validated again."
@@ -2782,7 +3241,7 @@ export default function RegulatoryChangeReviewPage() {
       analysisDetail.provision_count
       < 1
     ) {
-      setErrorMessage(
+      setStructuredErrorMessage(
         "At least one Article / provision "
         + "impact is required before "
         + "validation."
@@ -2800,7 +3259,7 @@ export default function RegulatoryChangeReviewPage() {
       cleanedNotes.length
       < 10
     ) {
-      setErrorMessage(
+      setStructuredErrorMessage(
         "Validation notes must contain "
         + "at least 10 characters."
       );
@@ -2825,11 +3284,11 @@ export default function RegulatoryChangeReviewPage() {
         true
       );
 
-      setErrorMessage(
+      setStructuredErrorMessage(
         ""
       );
 
-      setSuccessMessage(
+      setStructuredSuccessMessage(
         ""
       );
 
@@ -2901,7 +3360,7 @@ export default function RegulatoryChangeReviewPage() {
           RegulatoryChangeAnalysisValidationResponse;
 
 
-      setSuccessMessage(
+      setStructuredSuccessMessage(
         validated.message
         || (
           "Structured regulatory analysis "
@@ -2918,7 +3377,7 @@ export default function RegulatoryChangeReviewPage() {
         error
       );
 
-      setErrorMessage(
+      setStructuredErrorMessage(
         error instanceof Error
           ? error.message
           : (
@@ -3694,6 +4153,30 @@ export default function RegulatoryChangeReviewPage() {
 
 
           {
+            reviewErrorMessage
+            && (
+              <MessageBox
+                tone="danger"
+              >
+                {reviewErrorMessage}
+              </MessageBox>
+            )
+          }
+
+
+          {
+            reviewSuccessMessage
+            && (
+              <MessageBox
+                tone="success"
+              >
+                {reviewSuccessMessage}
+              </MessageBox>
+            )
+          }
+
+
+          {
             change.impact_status
             === "analysed"
             && !change.published_at
@@ -4070,6 +4553,30 @@ export default function RegulatoryChangeReviewPage() {
                   )
                 }
               </div>
+
+
+              {
+                structuredErrorMessage
+                && (
+                  <MessageBox
+                    tone="danger"
+                  >
+                    {structuredErrorMessage}
+                  </MessageBox>
+                )
+              }
+
+
+              {
+                structuredSuccessMessage
+                && (
+                  <MessageBox
+                    tone="success"
+                  >
+                    {structuredSuccessMessage}
+                  </MessageBox>
+                )
+              }
 
 
               {
@@ -4569,7 +5076,7 @@ export default function RegulatoryChangeReviewPage() {
               </div>
 
 
-                          {
+              {
                 selectedAnalysisId
                 && knowledgePack
                 && (
@@ -5098,7 +5605,8 @@ export default function RegulatoryChangeReviewPage() {
                     </div>
                     
 
-                                        <div
+                    <div
+                      ref={provisionImpactSectionRef}
                       style={{
                         marginTop:
                           "22px",
@@ -5555,15 +6063,59 @@ export default function RegulatoryChangeReviewPage() {
 
                           justifyContent:
                             "flex-end",
+
+                          gap:
+                          "10px",
                         }}
-                      >
+                        >
+                        {
+                          editingProvisionImpactId
+                          && (
+                            <button
+                              type="button"
+                              onClick={
+                                cancelEditProvisionImpact
+                              }
+                              disabled={
+                                isSavingProvision
+                              }
+                              style={{
+                                ...secondaryButtonStyle,
+
+                                /*marginRight:
+                                  "10px",*/
+
+                                opacity:
+                                  isSavingProvision
+                                    ? 0.6
+                                    : 1,
+
+                                cursor:
+                                  isSavingProvision
+                                    ? "not-allowed"
+                                    : "pointer",
+                              }}
+                            >
+                              Cancel Edit
+                            </button>
+                          )
+                        }
+
+
                         <button
                           type="button"
                           onClick={
                             () => {
-                              void handleCreateProvisionImpact();
+                              if (
+                                editingProvisionImpactId
+                              ) {
+                                void handleUpdateProvisionImpact();
+                              } else {
+                                void handleCreateProvisionImpact();
+                              }
                             }
                           }
+
                           disabled={
                             !isAnalysisEditable
                             || isSavingProvision
@@ -5593,8 +6145,14 @@ export default function RegulatoryChangeReviewPage() {
                         >
                           {
                             isSavingProvision
-                              ? "Saving Provision Impact..."
-                              : "Add Provision Impact"
+                              ? (
+                                  editingProvisionImpactId
+                                    ? "Updating Provision Impact..."
+                                    : "Saving Provision Impact..."
+                                )
+                              : editingProvisionImpactId
+                                ? "Update Provision Impact"
+                                : "Add Provision Impact"
                           }
                         </button>
                       </div>
@@ -5880,22 +6438,79 @@ export default function RegulatoryChangeReviewPage() {
                                     </div>
 
 
-                                    <StatusBadge
-                                      text={
-                                        formatStatus(
+                                    <div
+                                      style={{
+                                        display:
+                                          "flex",
+
+                                        alignItems:
+                                          "center",
+
+                                        gap:
+                                          "10px",
+
+                                        flexWrap:
+                                          "wrap",
+                                      }}
+                                    >
+                                      <StatusBadge
+                                        text={
+                                          formatStatus(
+                                            impact.review_status
+                                          )
+                                        }
+                                        tone={
                                           impact.review_status
+                                          === "validated"
+                                            ? "success"
+                                            : impact.review_status
+                                              === "rejected"
+                                              ? "neutral"
+                                              : "warning"
+                                        }
+                                      />
+
+
+                                      {
+                                        isAnalysisEditable
+                                        && (
+                                          <button
+                                            type="button"
+                                            onClick={
+                                              () => {
+                                                beginEditProvisionImpact(
+                                                  detail
+                                                );
+                                              }
+                                            }
+                                            disabled={
+                                              isSavingProvision
+                                            }
+                                            style={{
+                                              ...secondaryButtonStyle,
+
+                                              padding:
+                                                "7px 12px",
+
+                                              fontSize:
+                                                "12px",
+
+                                              opacity:
+                                                isSavingProvision
+                                                  ? 0.6
+                                                  : 1,
+
+                                              cursor:
+                                                isSavingProvision
+                                                  ? "not-allowed"
+                                                  : "pointer",
+                                            }}
+                                          >
+                                            Edit
+                                          </button>
                                         )
                                       }
-                                      tone={
-                                        impact.review_status
-                                        === "validated"
-                                          ? "success"
-                                          : impact.review_status
-                                            === "rejected"
-                                            ? "neutral"
-                                            : "warning"
-                                      }
-                                    />
+                                    </div>
                                   </div>
 
 
@@ -6544,7 +7159,9 @@ export default function RegulatoryChangeReviewPage() {
         }
 
 
-        {/* IMPACT ANALYSIS */}
+        {/*=============================================
+                  /* IMPACT ANALYSIS 
+            ===========================================*/}
 
         {
           change.review_decision
@@ -6625,8 +7242,33 @@ export default function RegulatoryChangeReviewPage() {
 
 
               {
-                change.impact_status
-                === "analysis_required"
+                impactErrorMessage
+                && (
+                  <MessageBox
+                    tone="danger"
+                  >
+                    {impactErrorMessage}
+                  </MessageBox>
+                )
+              }
+
+
+              {
+                impactSuccessMessage
+                && (
+                  <MessageBox
+                    tone="success"
+                  >
+                    {impactSuccessMessage}
+                  </MessageBox>
+                )
+              }
+
+
+              {
+                !impactErrorMessage
+                && change.impact_status
+                  === "analysis_required"
                 && (
                   <MessageBox
                     tone="warning"

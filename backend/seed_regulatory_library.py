@@ -217,6 +217,36 @@ REGULATIONS = [
         "extraterritorial": False,
         "mandatory": True,
     },
+        {
+        "name": (
+            "Children's Online Privacy "
+            "Protection Rule"
+        ),
+        "short_name": "COPPA",
+        "regulation_type": (
+            "Children's Privacy Regulation"
+        ),
+        "summary": (
+            "United States federal rule "
+            "implementing the Children's Online "
+            "Privacy Protection Act and governing "
+            "the online collection, use and "
+            "disclosure of personal information "
+            "from children under 13."
+        ),
+        "regulatory_authority": (
+            "Federal Trade Commission"
+        ),
+        "official_source_url": (
+            "https://www.ftc.gov/legal-library/"
+            "browse/rules/childrens-online-privacy-"
+            "protection-rule-coppa"
+        ),
+        "effective_date": None,
+        "status": "Active",
+        "extraterritorial": False,
+        "mandatory": True,
+    },
     {
         "name": "Privacy Act 1988",
         "short_name": "Australia Privacy Act",
