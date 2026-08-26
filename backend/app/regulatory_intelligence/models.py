@@ -975,6 +975,13 @@ class RegulatoryChangeProvisionImpact(Base):
         index=True,
     )
 
+    review_notes: Mapped[
+        str | None
+    ] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
     reviewed_by_user_id: Mapped[
         int | None
     ] = mapped_column(

@@ -429,6 +429,10 @@ type ImpactLevel =
 
     review_status: string;
 
+    review_notes:
+      | string
+      | null;
+
     reviewed_by_user_id:
       | number
       | null;
@@ -705,7 +709,31 @@ export default function RegulatoryChangeReviewPage() {
     number | null
   >(null);
 
+  const [
+    reviewingProvisionImpactId,
+    setReviewingProvisionImpactId,
+  ] = useState<
+    number | null
+  >(null);
+
+  const [
+    provisionReviewNotes,
+    setProvisionReviewNotes,
+  ] = useState<
+    Record<number, string>
+  >({});
+
+  const [
+    isReviewingProvision,
+    setIsReviewingProvision,
+  ] = useState(false);
+
   const provisionImpactSectionRef =
+  useRef<HTMLDivElement | null>(
+    null
+  );
+
+  const structuredAnalysisSectionRef =
   useRef<HTMLDivElement | null>(
     null
   );
@@ -910,6 +938,15 @@ export default function RegulatoryChangeReviewPage() {
     setReviewNotes,
   ] = useState("");
 
+  const [
+    isEditingReview,
+    setIsEditingReview,
+  ] = useState(false);
+
+  const [
+    shouldScrollToStructuredAnalysis,
+    setShouldScrollToStructuredAnalysis,
+  ] = useState(false);
 
   const [
     impactLevel,
@@ -1605,7 +1642,9 @@ export default function RegulatoryChangeReviewPage() {
       selectedArticleId,
     ]
   );
-    const isMappedSource =
+
+
+  const isMappedSource =
     useMemo(
       () =>
         Boolean(
@@ -1613,6 +1652,54 @@ export default function RegulatoryChangeReviewPage() {
             .regulation_id
         ),
       [
+        evidence,
+      ]
+    );
+  
+  
+  useEffect(
+  () => {
+    if (
+      !shouldScrollToStructuredAnalysis
+      || isLoading
+      || !evidence
+      || evidence.change
+        .review_decision
+        !== "confirmed"
+      || !evidence.source
+        .regulation_id
+    ) {
+      return;
+    }
+
+    const frameId =
+      requestAnimationFrame(
+        () => {
+          structuredAnalysisSectionRef
+            .current
+            ?.scrollIntoView({
+              behavior:
+                "smooth",
+
+              block:
+                "start",
+            });
+
+          setShouldScrollToStructuredAnalysis(
+            false
+          );
+        }
+      );
+
+        return () => {
+          cancelAnimationFrame(
+            frameId
+          );
+        };
+      },
+      [
+        shouldScrollToStructuredAnalysis,
+        isLoading,
         evidence,
       ]
     );
@@ -1730,6 +1817,57 @@ export default function RegulatoryChangeReviewPage() {
     );
 
 
+  const canEditReview =
+    useMemo(
+      () =>
+        Boolean(
+          evidence
+          && !evidence.change
+            .published_at
+          && evidence.change
+            .review_status
+            === "reviewed"
+          && evidence.change
+            .impact_status
+            !== "analysed"
+        ),
+      [
+        evidence,
+      ]
+    );
+
+
+    const canCreateNewAnalysisVersion =
+      useMemo(
+        () =>
+          Boolean(
+            selectedAnalysis
+            && analysisDetail
+            && !evidence?.change
+              .published_at
+            && (
+              selectedAnalysis
+                .analysis_status
+              === "validated"
+              || selectedAnalysis
+                .analysis_status
+              === "published"
+            )
+            && analysisDetail
+              .provision_count > 0
+            && analysisDetail
+              .validated_provision_count
+              === analysisDetail
+                .provision_count
+          ),
+        [
+          selectedAnalysis,
+          analysisDetail,
+          evidence,
+        ]
+      );
+
+
   const canPublish =
     useMemo(
       () =>
@@ -1774,7 +1912,6 @@ export default function RegulatoryChangeReviewPage() {
 
     const cleanedNotes =
       reviewNotes.trim();
-
 
     setReviewErrorMessage(
       ""
@@ -1865,7 +2002,7 @@ export default function RegulatoryChangeReviewPage() {
         throw new Error(
           getApiErrorMessage(
             data as ApiError,
-              "Unable to load structured analyses."
+              "Unable to save regulatory review."
           )
         );
         }   
@@ -1897,7 +2034,15 @@ export default function RegulatoryChangeReviewPage() {
       }
 
 
+      setShouldScrollToStructuredAnalysis(
+        reviewDecision === "confirmed"
+      );
+      
       await loadEvidence();
+
+      setIsEditingReview(
+        false
+      );
 
     } catch (error) {
       console.error(
@@ -2166,6 +2311,26 @@ export default function RegulatoryChangeReviewPage() {
       return;
     }
 
+
+    if (
+      createNewVersion
+      && (
+        !selectedAnalysis
+        || !analysisDetail
+        || !canCreateNewAnalysisVersion
+      )
+    ) {
+      setStructuredErrorMessage(
+        "A new analysis version can only "
+        + "be created after the current "
+        + "version has been fully completed "
+        + "and validated."
+      );
+
+      return;
+    }
+
+
     const cleanedMethod =
       analysisMethod.trim();
 
@@ -2370,6 +2535,22 @@ export default function RegulatoryChangeReviewPage() {
             + `updated successfully.`
           )
       );
+
+
+      requestAnimationFrame(
+        () => {
+          structuredAnalysisSectionRef
+            .current
+            ?.scrollIntoView({
+              behavior:
+                "smooth",
+
+              block:
+                "start",
+            });
+        }
+      );
+
 
     } catch (error) {
       console.error(
@@ -3055,7 +3236,227 @@ export default function RegulatoryChangeReviewPage() {
  }
 
 
-  function beginEditProvisionImpact(
+async function handleReviewProvisionImpact(
+  impactId: number,
+  reviewStatus:
+    | "validated"
+    | "rejected"
+) {
+  if (
+    !selectedAnalysisId
+    || !analysisDetail
+  ) {
+    setStructuredErrorMessage(
+      "Select a structured analysis "
+      + "before reviewing a provision."
+    );
+
+    return;
+  }
+
+
+  if (
+    !isAnalysisEditable
+  ) {
+    setStructuredErrorMessage(
+      "This structured analysis is "
+      + "read-only and its provision "
+      + "impacts cannot be reviewed."
+    );
+
+    return;
+  }
+
+
+  const cleanedNotes =
+  (
+    provisionReviewNotes[
+      impactId
+    ]
+    ?? ""
+  ).trim();
+
+
+  if (
+    cleanedNotes.length
+    < 10
+  ) {
+    setStructuredErrorMessage(
+      "Provision review notes must "
+      + "contain at least 10 characters."
+    );
+
+    return;
+  }
+
+
+  const token =
+    getToken();
+
+
+  if (
+    !token
+  ) {
+    return;
+  }
+
+
+  try {
+    setIsReviewingProvision(
+      true
+    );
+
+    setReviewingProvisionImpactId(
+      impactId
+    );
+
+    setStructuredErrorMessage(
+      ""
+    );
+
+    setStructuredSuccessMessage(
+      ""
+    );
+
+
+    const response =
+      await fetch(
+        `${API_URL}/api/v1/regulatory-intelligence/changes/${changeId}/analyses/${selectedAnalysisId}/provisions/${impactId}/review`,
+        {
+          method:
+            "PATCH",
+
+          headers: {
+            Accept:
+              "application/json",
+
+            "Content-Type":
+              "application/json",
+
+            Authorization:
+              `Bearer ${token}`,
+          },
+
+          body:
+            JSON.stringify({
+              review_status:
+                reviewStatus,
+
+              review_notes:
+                cleanedNotes,
+            }),
+        }
+      );
+
+
+    if (
+      response.status
+      === 401
+    ) {
+      clearAuthentication();
+
+      router.replace(
+        "/login"
+      );
+
+      return;
+    }
+
+
+    const data =
+      (
+        await response.json()
+      ) as
+        | RegulatoryProvisionImpact
+        | ApiError;
+
+
+    if (
+      !response.ok
+    ) {
+      throw new Error(
+        getApiErrorMessage(
+          data as ApiError,
+          reviewStatus
+            === "validated"
+            ? (
+                "Unable to validate "
+                + "regulatory provision impact."
+              )
+            : (
+                "Unable to reject "
+                + "regulatory provision impact."
+              )
+        )
+      );
+    }
+
+
+    setStructuredSuccessMessage(
+      reviewStatus
+        === "validated"
+        ? (
+            "Regulatory provision impact "
+            + "validated successfully."
+          )
+        : (
+            "Regulatory provision impact "
+            + "rejected successfully."
+          )
+    );
+
+
+    setProvisionReviewNotes(
+      (
+        previous
+      ) => ({
+        ...previous,
+
+        [impactId]:
+          "",
+      })
+    );
+
+
+    await loadAnalyses(
+      token,
+      selectedAnalysisId
+    );
+
+
+    await loadAnalysisDetail(
+      token,
+      selectedAnalysisId
+    );
+
+  } catch (error) {
+    console.error(
+      "Provision impact review error:",
+      error
+    );
+
+    setStructuredErrorMessage(
+      error instanceof Error
+        ? error.message
+        : (
+            "Unable to review regulatory "
+            + "provision impact."
+          )
+    );
+
+  } finally {
+    setIsReviewingProvision(
+      false
+    );
+
+    setReviewingProvisionImpactId(
+      null
+    );
+  }
+}
+
+ 
+function beginEditProvisionImpact(
     detail: RegulatoryProvisionImpactDetail
   ) {
     const impact =
@@ -3245,6 +3646,22 @@ export default function RegulatoryChangeReviewPage() {
         "At least one Article / provision "
         + "impact is required before "
         + "validation."
+      );
+
+      return;
+    }
+
+
+    if (
+      analysisDetail
+        .validated_provision_count
+      !== analysisDetail
+        .provision_count
+    ) {
+      setStructuredErrorMessage(
+        "All provision impacts must be "
+        + "validated before the structured "
+        + "analysis can be validated."
       );
 
       return;
@@ -4250,9 +4667,18 @@ export default function RegulatoryChangeReviewPage() {
                     )
                 }
                 disabled={
-                  !canReview
+                  (
+                    !canReview
+                    || (
+                      evidence?.change
+                        .review_status
+                        === "reviewed"
+                      && !isEditingReview
+                    )
+                  )
                   || isSubmitting
                 }
+
                 style={
                   inputStyle
                 }
@@ -4300,7 +4726,15 @@ export default function RegulatoryChangeReviewPage() {
                     )
                 }
                 disabled={
-                  !canReview
+                  (
+                    !canReview
+                    || (
+                      evidence?.change
+                        .review_status
+                        === "reviewed"
+                      && !isEditingReview
+                    )
+                  )
                   || isSubmitting
                 }
                 style={
@@ -4368,7 +4802,15 @@ export default function RegulatoryChangeReviewPage() {
                   )
               }
               disabled={
-                !canReview
+                (
+                  !canReview
+                  || (
+                    evidence?.change
+                      .review_status
+                      === "reviewed"
+                    && !isEditingReview
+                  )
+                )
                 || isSubmitting
               }
               placeholder={
@@ -4421,6 +4863,35 @@ export default function RegulatoryChangeReviewPage() {
             </Link>
 
 
+            {
+              canEditReview
+              && !isEditingReview
+              && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditingReview(
+                      true
+                    );
+
+                    setReviewErrorMessage(
+                      ""
+                    );
+
+                    setReviewSuccessMessage(
+                      ""
+                    );
+                  }}
+                  style={
+                    secondaryButtonStyle
+                  }
+                >
+                  Edit Review
+                </button>
+              )
+            }
+
+
             <button
               type="button"
               onClick={
@@ -4431,24 +4902,50 @@ export default function RegulatoryChangeReviewPage() {
               disabled={
                 !canReview
                 || isSubmitting
+                || (
+                  evidence?.change
+                    .review_status
+                    === "reviewed"
+                  && !isEditingReview
+                )
               }
               style={{
                 ...primaryButtonStyle,
 
                 backgroundColor:
+                (
                   !canReview
-                    ? "#94a3b8"
-                    : "#2563eb",
+                  ||isSubmitting
+                  || (
+                    evidence?.change
+                      .review_status
+                      === "reviewed"
+                    && !isEditingReview
+                  )
+                )
+                  ? "#94a3b8"
+                  : "#2563eb",
 
-                cursor:
+              cursor:
+                (
                   !canReview
-                    ? "not-allowed"
-                    : "pointer",
+                  ||isSubmitting
+                  || (
+                    evidence?.change
+                      .review_status
+                      === "reviewed"
+                    && !isEditingReview
+                  )
+                )
+                  ? "not-allowed"
+                  : "pointer",
               }}
             >
               {
                 isSubmitting
                   ? "Saving Review..."
+                  : isEditingReview
+                  ? "Save Review Changes"
                   : canReview
                     ? "Save Regulatory Review"
                     : "Regulatory Review Locked"
@@ -4465,6 +4962,11 @@ export default function RegulatoryChangeReviewPage() {
           === "confirmed"
           && isMappedSource
           && (
+            <div
+              ref={
+                structuredAnalysisSectionRef
+              }
+            >
             <SectionCard>
               <div
                 style={{
@@ -6338,6 +6840,17 @@ export default function RegulatoryChangeReviewPage() {
                             ) => {
                               const impact =
                                 detail.impact;
+                              
+                              const provisionReviewNote =
+                                (
+                                  provisionReviewNotes[
+                                    impact.id
+                                  ]
+                                  ?? ""
+                                ).trim();
+
+                              const hasValidProvisionReviewNote =
+                                provisionReviewNote.length >= 10;
 
                               return (
                                 <div
@@ -6807,6 +7320,360 @@ export default function RegulatoryChangeReviewPage() {
 
 
                                   {
+                                    isAnalysisEditable
+                                    && impact.review_status === "pending_review"
+                                    && (
+                                      <div
+                                        style={{
+                                          marginTop:
+                                            "18px",
+
+                                          paddingTop:
+                                            "16px",
+
+                                          borderTop:
+                                            "1px solid #e2e8f0",
+                                        }}
+                                      >
+                                        <div
+                                          style={{
+                                            marginBottom:
+                                              "12px",
+                                          }}
+                                        >
+                                          <div
+                                            style={{
+                                              color:
+                                                "#0f172a",
+
+                                              fontSize:
+                                                "13px",
+
+                                              fontWeight:
+                                                800,
+                                            }}
+                                          >
+                                            Provision Human Review
+                                          </div>
+
+                                          <div
+                                            style={{
+                                              marginTop:
+                                                "4px",
+
+                                              color:
+                                                "#64748b",
+
+                                              fontSize:
+                                                "12px",
+
+                                              lineHeight:
+                                                1.5,
+                                            }}
+                                          >
+                                            Record the reviewer assessment
+                                            before validating or rejecting
+                                            this provision impact.
+                                          </div>
+                                        </div>
+
+
+                                        <div>
+                                          <label
+                                            style={
+                                              labelStyle
+                                            }
+                                          >
+                                            Provision Review Notes
+                                          </label>
+
+                                          <textarea
+                                            value={
+                                              provisionReviewNotes[
+                                                impact.id
+                                              ]
+                                              ?? ""
+                                            }
+                                            onChange={
+                                              (
+                                                event
+                                              ) => {
+                                                const value =
+                                                  event.target.value;
+
+                                                setProvisionReviewNotes(
+                                                  (
+                                                    previous
+                                                  ) => ({
+                                                    ...previous,
+
+                                                    [impact.id]:
+                                                      value,
+                                                  })
+                                                );
+                                              }
+                                            }
+                                            placeholder={
+                                              "Enter the human review rationale "
+                                              + "for this provision impact..."
+                                            }
+                                            disabled={
+                                              isReviewingProvision
+                                            }
+                                            style={{
+                                              ...inputStyle,
+
+                                              minHeight:
+                                                "100px",
+
+                                              resize:
+                                                "vertical",
+                                            }}
+                                          />
+
+                                          <div
+                                            style={{
+                                              marginTop:
+                                                "6px",
+
+                                              color:
+                                                hasValidProvisionReviewNote
+                                                  ? "#166534"
+                                                  : "#64748b",
+
+                                              fontSize:
+                                                "12px",
+                                            }}
+                                          >
+                                            {
+                                              hasValidProvisionReviewNote
+                                                ? "Review notes requirement satisfied."
+                                                : "Minimum 10 characters required."
+                                            }
+                                          </div>
+                                        </div>
+
+
+                                        <div
+                                          style={{
+                                            display:
+                                              "flex",
+
+                                            justifyContent:
+                                              "flex-end",
+
+                                            gap:
+                                              "10px",
+
+                                            flexWrap:
+                                              "wrap",
+
+                                            marginTop:
+                                              "12px",
+                                          }}
+                                        >
+                                          <button
+                                            type="button"
+                                            onClick={
+                                              () => {
+                                                void handleReviewProvisionImpact(
+                                                  impact.id,
+                                                  "rejected"
+                                                );
+                                              }
+                                            }
+                                            disabled={
+                                              isReviewingProvision
+                                              || !hasValidProvisionReviewNote
+                                            }
+                                            style={{
+                                              ...secondaryButtonStyle,
+
+                                              opacity:
+                                                (
+                                                  isReviewingProvision
+                                                  || !hasValidProvisionReviewNote
+                                                )
+                                                  ? 0.6
+                                                  : 1,
+
+                                              cursor:
+                                                (
+                                                  isReviewingProvision
+                                                  || !hasValidProvisionReviewNote
+                                                )
+                                                  ? "not-allowed"
+                                                  : "pointer",
+                                            }}
+                                          >
+                                            {
+                                              isReviewingProvision
+                                              && reviewingProvisionImpactId
+                                                === impact.id
+                                                ? "Reviewing..."
+                                                : "Reject Provision"
+                                            }
+                                          </button>
+
+
+                                          <button
+                                            type="button"
+                                            onClick={
+                                              () => {
+                                                void handleReviewProvisionImpact(
+                                                  impact.id,
+                                                  "validated"
+                                                );
+                                              }
+                                            }
+                                            disabled={
+                                              isReviewingProvision
+                                              || !hasValidProvisionReviewNote
+                                            }
+                                            style={{
+                                              ...primaryButtonStyle,
+
+                                              backgroundColor:
+                                                (
+                                                  isReviewingProvision
+                                                  || !hasValidProvisionReviewNote
+                                                )
+                                                  ? "#94a3b8"
+                                                  : "#16a34a",
+
+                                              opacity:
+                                                (
+                                                  isReviewingProvision
+                                                  || !hasValidProvisionReviewNote
+                                                )
+                                                  ? 0.6
+                                                  : 1,
+
+                                              cursor:
+                                                (
+                                                  isReviewingProvision
+                                                  || !hasValidProvisionReviewNote
+                                                )
+                                                  ? "not-allowed"
+                                                  : "pointer",
+                                            }}
+                                          >
+                                            {
+                                              isReviewingProvision
+                                              && reviewingProvisionImpactId
+                                                === impact.id
+                                                ? "Reviewing..."
+                                                : "Validate Provision"
+                                            }
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )
+                                  }
+
+
+                                  {
+                                    impact.review_status !== "pending_review"
+                                    && (
+                                      <div
+                                        style={{
+                                          marginTop:
+                                            "18px",
+
+                                          paddingTop:
+                                            "16px",
+
+                                          borderTop:
+                                            "1px solid #e2e8f0",
+                                        }}
+                                      >
+                                        <div
+                                          style={{
+                                            color:
+                                              "#0f172a",
+
+                                            fontSize:
+                                              "13px",
+
+                                            fontWeight:
+                                              800,
+
+                                            marginBottom:
+                                              "12px",
+                                          }}
+                                        >
+                                          Human Review Record
+                                        </div>
+
+                                        <div
+                                          style={{
+                                            display:
+                                              "grid",
+
+                                            gridTemplateColumns:
+                                              "repeat(auto-fit, minmax(180px, 1fr))",
+
+                                            gap:
+                                              "14px",
+                                          }}
+                                        >
+                                          <InfoItem
+                                            label="Review Status"
+                                            value={
+                                              formatStatus(
+                                                impact.review_status
+                                              )
+                                            }
+                                          />
+
+                                          <InfoItem
+                                            label="Reviewed By"
+                                            value={
+                                              impact.reviewed_by_user_id
+                                                ? (
+                                                    `User #`
+                                                    + `${impact.reviewed_by_user_id}`
+                                                  )
+                                                : "Not available"
+                                            }
+                                          />
+
+                                          <InfoItem
+                                            label="Reviewed At"
+                                            value={
+                                              impact.reviewed_at
+                                                ? formatDate(
+                                                    impact.reviewed_at
+                                                  )
+                                                : "Not available"
+                                            }
+                                          />
+                                        </div>
+
+                                        {
+                                          impact.review_notes
+                                          && (
+                                            <div
+                                              style={{
+                                                marginTop:
+                                                  "10px",
+                                              }}
+                                            >
+                                              <InfoItem
+                                                label="Review Notes"
+                                                value={
+                                                  impact.review_notes
+                                                }
+                                              />
+                                            </div>
+                                          )
+                                        }
+                                      </div>
+                                    )
+                                  }
+
+                                  
+                                  {
                                     impact.source_url
                                     && (
                                       <div
@@ -6851,7 +7718,7 @@ export default function RegulatoryChangeReviewPage() {
               }
 
 
-                            {
+              {
                 analysisDetail
                 && analysisDetail.provision_count > 0
                 && (
@@ -6977,20 +7844,50 @@ export default function RegulatoryChangeReviewPage() {
                                 disabled={
                                   isValidatingAnalysis
                                   || analysisDetail.provision_count < 1
+                                  || analysisDetail
+                                    .validated_provision_count
+                                    !== analysisDetail
+                                      .provision_count
                                 }
                                 style={{
                                   ...primaryButtonStyle,
 
                                   backgroundColor:
-                                    isValidatingAnalysis
+                                    (
+                                      isValidatingAnalysis
+                                      || analysisDetail.provision_count < 1
+                                      || analysisDetail
+                                        .validated_provision_count
+                                        !== analysisDetail
+                                          .provision_count
+                                    )
                                       ? "#94a3b8"
                                       : "#16a34a",
+                                  
+                                  opacity:
+                                    (
+                                      isValidatingAnalysis
+                                      || analysisDetail.provision_count < 1
+                                      || analysisDetail
+                                         .validated_provision_count
+                                         !== analysisDetail
+                                           .provision_count
+                                    )
+                                      ? 0.6
+                                      : 1,    
 
                                   cursor:
-                                    isValidatingAnalysis
+                                    (
+                                      isValidatingAnalysis
+                                      || analysisDetail.provision_count < 1
+                                      || analysisDetail
+                                        .validated_provision_count
+                                        !== analysisDetail
+                                          .provision_count
+                                    )
                                       ? "not-allowed"
                                       : "pointer",
-                                }}
+                                    }}
                               >
                                 {
                                   isValidatingAnalysis
@@ -7057,9 +7954,7 @@ export default function RegulatoryChangeReviewPage() {
                       }
                       disabled={
                         isSavingAnalysis
-                        || Boolean(
-                          change.published_at
-                        )
+                        || !canCreateNewAnalysisVersion
                       }
                       style={{
                         ...secondaryButtonStyle,
@@ -7067,9 +7962,7 @@ export default function RegulatoryChangeReviewPage() {
                         cursor:
                           (
                             isSavingAnalysis
-                            || Boolean(
-                              change.published_at
-                            )
+                            || !canCreateNewAnalysisVersion
                           )
                             ? "not-allowed"
                             : "pointer",
@@ -7077,15 +7970,17 @@ export default function RegulatoryChangeReviewPage() {
                         opacity:
                           (
                             isSavingAnalysis
-                            || Boolean(
-                              change.published_at
-                            )
+                            || !canCreateNewAnalysisVersion
                           )
                             ? 0.6
                             : 1,
                       }}
                     >
-                      Create New Version
+                      {
+                        isSavingAnalysis
+                          ? "Creating Version..."
+                          : "Create New Version"
+                      }
                     </button>
                   )
                 }
@@ -7155,8 +8050,9 @@ export default function RegulatoryChangeReviewPage() {
                 </button>
               </div>
             </SectionCard>
-          )
-        }
+          </div>
+        )
+      }
 
 
         {/*=============================================

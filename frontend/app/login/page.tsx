@@ -48,6 +48,10 @@ export default function LoginPage() {
     setPassword,
   ] = useState("");
 
+  const [
+  showPassword,
+  setShowPassword,
+  ] = useState(false);
 
   const [
     isSubmitting,
@@ -514,7 +518,6 @@ export default function LoginPage() {
             />
           </label>
 
-
           <label
             style={{
               ...labelStyle,
@@ -524,29 +527,112 @@ export default function LoginPage() {
           >
             Password
 
-            <input
-              type="password"
-              required
-              autoComplete=
-                "current-password"
+            <div
+              style={{
+                position:
+                  "relative",
 
-              value={
-                password
-              }
+                marginTop:
+                  "6px",
+              }}
+            >
+              <input
+                type={
+                  showPassword
+                    ? "text"
+                    : "password"
+                }
 
-              onChange={(event) =>
-                setPassword(
-                  event.target.value
-                )
-              }
+                required
 
-              placeholder=
-                "Enter your password"
+                autoComplete=
+                  "current-password"
 
-              style={
-                inputStyle
-              }
-            />
+                value={
+                  password
+                }
+
+                onChange={(event) =>
+                  setPassword(
+                    event.target.value
+                  )
+                }
+
+                placeholder=
+                  "Enter your password"
+
+                style={{
+                  ...inputStyle,
+
+                  paddingRight:
+                    "48px",
+                }}
+              />
+
+              <button
+                type="button"
+
+                onClick={() =>
+                  setShowPassword(
+                    (current) =>
+                      !current
+                  )
+                }
+
+                aria-label={
+                  showPassword
+                    ? "Hide password"
+                    : "Show password"
+                }
+
+                title={
+                  showPassword
+                    ? "Hide password"
+                    : "Show password"
+                }
+
+                style={{
+                  position:
+                    "absolute",
+
+                  right:
+                    "12px",
+
+                  top:
+                    "50%",
+
+                  transform:
+                    "translateY(-50%)",
+
+                  border:
+                    "none",
+
+                  background:
+                    "transparent",
+
+                  padding:
+                    "4px",
+
+                  cursor:
+                    "pointer",
+
+                  color:
+                    "#64748b",
+
+                  fontSize:
+                    "18px",
+
+                  lineHeight:
+                    1,
+                }}
+              >
+                {
+                  showPassword
+                    ? "◉"
+                    : "👁"
+                }
+              </button>
+            </div>
           </label>
 
 

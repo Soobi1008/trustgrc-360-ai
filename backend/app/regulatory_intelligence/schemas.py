@@ -1008,6 +1008,8 @@ class RegulatoryProvisionImpactResponse(
 
     review_status: str
 
+    review_notes: str | None = None
+
     reviewed_by_user_id: int | None = None
     reviewed_at: datetime | None = None
 

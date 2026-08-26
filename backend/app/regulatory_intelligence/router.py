@@ -62,6 +62,7 @@ from .schemas import (
     RegulatoryProvisionImpactCreateResponse,
     RegulatoryProvisionImpactDetailResponse,
     RegulatoryProvisionImpactResponse,
+    RegulatoryProvisionImpactReviewRequest,
     RegulatoryProvisionImpactUpdateRequest,
     RegulatoryPublishResponse,
     RegulatorySnapshotResponse,
@@ -2469,6 +2470,119 @@ def update_regulatory_provision_impact(
 
 
 # =========================================================
+# PHASE 2 - REVIEW PROVISION IMPACT
+# =========================================================
+
+@router.patch(
+    (
+        "/changes/{change_id}/analyses/"
+        "{analysis_id}/provisions/"
+        "{impact_id}/review"
+    ),
+    response_model=
+        RegulatoryProvisionImpactResponse,
+)
+def review_regulatory_provision_impact(
+    change_id: int,
+    analysis_id: int,
+    impact_id: int,
+    payload:
+        RegulatoryProvisionImpactReviewRequest,
+    db: Session = Depends(
+        get_db
+    ),
+    current_user: User = Depends(
+        require_platform_admin
+    ),
+) -> RegulatoryChangeProvisionImpact:
+    """
+    Human-review an individual structured
+    regulatory provision impact.
+
+    A provision impact may be validated or
+    rejected only while its parent analysis
+    remains editable.
+    """
+
+    change = (
+        get_regulatory_change_or_404(
+            db,
+            change_id,
+        )
+    )
+
+    if (
+        change.published_at
+        is not None
+    ):
+        raise HTTPException(
+            status_code=
+                status.HTTP_409_CONFLICT,
+            detail=(
+                "Provision impacts cannot be "
+                "reviewed after the regulatory "
+                "change has been published."
+            ),
+        )
+
+    analysis = (
+        get_regulatory_analysis_or_404(
+            db,
+            change_id,
+            analysis_id,
+        )
+    )
+
+    require_analysis_editable(
+        analysis
+    )
+
+    impact = (
+        get_provision_impact_or_404(
+            db,
+            analysis_id,
+            impact_id,
+        )
+    )
+
+    review_time = (
+        datetime.utcnow()
+    )
+
+    impact.review_status = (
+        payload.review_status
+    )
+
+    impact.review_notes = (
+        payload.review_notes
+    )
+
+    impact.reviewed_by_user_id = (
+        current_user.id
+    )
+
+    impact.reviewed_at = (
+        review_time
+    )
+
+    impact.updated_at = (
+        review_time
+    )
+
+    analysis.updated_at = (
+        review_time
+    )
+
+    db.commit()
+
+    db.refresh(
+        impact
+    )
+
+    return impact
+
+
+# =========================================================
 # PHASE 2 - VALIDATE STRUCTURED ANALYSIS
 # =========================================================
 
@@ -2618,26 +2732,48 @@ def validate_regulatory_change_analysis(
             ),
         )
 
+    # -----------------------------------------------------
+    # PROVISION-LEVEL HUMAN REVIEW GATE
+    # -----------------------------------------------------
+    #
+    # Every provision impact must complete its own human
+    # review before the parent structured analysis can be
+    # validated. Analysis validation must never silently
+    # validate child provision-impact records.
+    # -----------------------------------------------------
+
+    pending_impacts = [
+        impact
+        for impact in impacts
+        if impact.review_status
+        != "validated"
+    ]
+
+    if pending_impacts:
+        pending_ids = [
+            str(impact.id)
+            for impact in pending_impacts
+        ]
+
+        raise HTTPException(
+            status_code=
+                status.HTTP_409_CONFLICT,
+            detail=(
+                "All provision impacts must be "
+                "individually human-validated before "
+                "the structured analysis can be "
+                "validated. Provision impact IDs "
+                "requiring review: "
+                + ", ".join(
+                    pending_ids
+                )
+                + "."
+            ),
+        )
+
     validation_time = (
         datetime.utcnow()
     )
-
-    for impact in impacts:
-        impact.review_status = (
-            "validated"
-        )
-
-        impact.reviewed_by_user_id = (
-            current_user.id
-        )
-
-        impact.reviewed_at = (
-            validation_time
-        )
-
-        impact.updated_at = (
-            validation_time
-        )
 
     analysis.overall_impact_level = (
         overall_impact
