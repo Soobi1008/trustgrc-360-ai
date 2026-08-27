@@ -37,6 +37,7 @@ from .models import (
     RegulatoryChange,
     RegulatoryChangeAnalysis,
     RegulatoryChangeProvisionImpact,
+    RegulatoryChangeProvisionReview,
     RegulatorySnapshot,
     RegulatorySource,
 )
@@ -62,6 +63,7 @@ from .schemas import (
     RegulatoryProvisionImpactCreateResponse,
     RegulatoryProvisionImpactDetailResponse,
     RegulatoryProvisionImpactResponse,
+    RegulatoryProvisionReviewHistoryResponse,
     RegulatoryProvisionImpactReviewRequest,
     RegulatoryProvisionImpactUpdateRequest,
     RegulatoryPublishResponse,
@@ -628,6 +630,17 @@ def build_provision_impact_detail(
                     impact
                 )
             ),
+
+
+            review_history=[
+            RegulatoryProvisionReviewHistoryResponse
+            .model_validate(
+                history_entry
+            )
+            for history_entry
+            in impact.review_history
+        ],
+
 
             regulation=(
                 RegulatoryKnowledgeRegulationResponse
@@ -2549,6 +2562,34 @@ def review_regulatory_provision_impact(
         datetime.utcnow()
     )
 
+
+    review_history_entry = (
+    RegulatoryChangeProvisionReview(
+        provision_impact_id=
+            impact.id,
+
+        review_status=
+            payload.review_status,
+
+        review_notes=
+            payload.review_notes,
+
+        reviewed_by_user_id=
+            current_user.id,
+
+        reviewed_at=
+            review_time,
+
+        created_at=
+            review_time,
+    )
+    )
+
+    db.add(
+        review_history_entry
+    )
+
+
     impact.review_status = (
         payload.review_status
     )
@@ -2986,12 +3027,14 @@ def publish_regulatory_change(
     # Unmapped legacy sources temporarily continue
     # to use the Phase 1 workflow.
     # -----------------------------------------------------
+    
+    latest_analysis = None
 
     if (
         source.regulation_id
         is not None
     ):
-        validated_analysis = (
+        latest_analysis = (
             db.query(
                 RegulatoryChangeAnalysis
             )
@@ -2999,10 +3042,6 @@ def publish_regulatory_change(
                 RegulatoryChangeAnalysis
                 .regulatory_change_id
                 == change.id,
-
-                RegulatoryChangeAnalysis
-                .analysis_status
-                == "validated",
             )
             .order_by(
                 RegulatoryChangeAnalysis
@@ -3012,17 +3051,22 @@ def publish_regulatory_change(
             .first()
         )
 
-        if validated_analysis is None:
+        if (
+            latest_analysis is None
+            or latest_analysis
+                .analysis_status
+                != "validated"
+        ):
             raise HTTPException(
                 status_code=
                     status.HTTP_409_CONFLICT,
                 detail=(
                     "This regulatory source is "
                     "mapped to the canonical "
-                    "Regulatory Library. A validated "
+                    "Regulatory Library. The latest "
                     "structured Article / provision "
-                    "analysis is required before "
-                    "publication."
+                    "analysis version must be "
+                    "validated before publication."
                 ),
             )
 
@@ -3034,43 +3078,25 @@ def publish_regulatory_change(
         publication_time
     )
 
+    change.published_by_user_id = (
+        current_user.id
+    )
+
     # -----------------------------------------------------
-    # MARK VALIDATED STRUCTURED ANALYSIS AS PUBLISHED
+    # MARK LATEST VALIDATED STRUCTURED ANALYSIS AS PUBLISHED
     # -----------------------------------------------------
 
     if (
-        source.regulation_id
+        latest_analysis
         is not None
     ):
-        validated_analysis = (
-            db.query(
-                RegulatoryChangeAnalysis
-            )
-            .filter(
-                RegulatoryChangeAnalysis
-                .regulatory_change_id
-                == change.id,
-
-                RegulatoryChangeAnalysis
-                .analysis_status
-                == "validated",
-            )
-            .order_by(
-                RegulatoryChangeAnalysis
-                .analysis_version
-                .desc()
-            )
-            .first()
+        latest_analysis.analysis_status = (
+            "published"
         )
 
-        if validated_analysis is not None:
-            validated_analysis.analysis_status = (
-                "published"
-            )
-
-            validated_analysis.updated_at = (
-                publication_time
-            )
+        latest_analysis.updated_at = (
+            publication_time
+        )
 
     db.commit()
 
@@ -3093,6 +3119,12 @@ def publish_regulatory_change(
 
         impact_level=
             change.impact_level,
+
+        published_by_user_id=
+            current_user.id,
+
+        published_by_name=
+            current_user.full_name,
 
         published_at=
             change.published_at,

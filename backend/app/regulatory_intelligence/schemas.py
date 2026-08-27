@@ -202,6 +202,8 @@ class RegulatoryChangeResponse(BaseModel):
     # PUBLICATION
     # -----------------------------------------------------
 
+    published_by_user_id: int | None = None
+    published_by_name: str | None = None
     published_at: datetime | None = None
 
     model_config = {
@@ -343,6 +345,8 @@ class RegulatoryPublishResponse(BaseModel):
     impact_status: str
     impact_level: str | None
 
+    published_by_user_id: int
+    published_by_name: str
     published_at: datetime
 
     message: str
@@ -949,6 +953,33 @@ class RegulatoryChangeAnalysisValidationRequest(
 # PROVISION IMPACT RESPONSE
 # =========================================================
 
+# =========================================================
+# PHASE 2
+# PROVISION REVIEW HISTORY RESPONSE
+# =========================================================
+
+class RegulatoryProvisionReviewHistoryResponse(
+    BaseModel
+):
+    id: int
+
+    provision_impact_id: int
+
+    review_status: str
+
+    review_notes: str
+
+    reviewed_by_user_id: int | None = None
+
+    reviewed_at: datetime
+
+    created_at: datetime
+
+    model_config = {
+        "from_attributes": True
+    }
+
+
 class RegulatoryProvisionImpactResponse(
     BaseModel
 ):
@@ -1034,6 +1065,10 @@ class RegulatoryProvisionImpactDetailResponse(
     BaseModel
 ):
     impact: RegulatoryProvisionImpactResponse
+
+    review_history: list[
+        RegulatoryProvisionReviewHistoryResponse
+    ] = []
 
     regulation: (
         RegulatoryKnowledgeRegulationResponse

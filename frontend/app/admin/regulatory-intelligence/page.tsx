@@ -69,6 +69,9 @@ type RegulatoryChange = {
   summary: string | null;
 
   detected_at: string;
+
+  published_by_user_id: number | null;
+  published_by_name: string | null;
   published_at: string | null;
 };
 
@@ -1466,6 +1469,10 @@ export default function RegulatoryIntelligencePage() {
                         </TableHeader>
 
                         <TableHeader>
+                          Published By
+                        </TableHeader>
+
+                        <TableHeader>
                           Published
                         </TableHeader>
 
@@ -1484,7 +1491,7 @@ export default function RegulatoryIntelligencePage() {
                           <tr>
                             <td
                               colSpan={
-                                6
+                                7
                               }
                               style={{
                                 padding:
@@ -1599,6 +1606,14 @@ export default function RegulatoryIntelligencePage() {
                                         )
                                       }
                                     />
+                                  </TableCell>
+
+
+                                  <TableCell>
+                                    {
+                                      change.published_by_name
+                                      ?? "—"
+                                    }
                                   </TableCell>
 
 

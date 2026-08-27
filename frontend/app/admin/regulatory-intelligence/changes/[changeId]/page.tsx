@@ -116,6 +116,8 @@ type RegulatoryChange = {
   impact_level: string | null;
   impact_summary: string | null;
 
+  published_by_user_id: number | null;
+  published_by_name: string | null;
   published_at: string | null;
 };
 
@@ -143,6 +145,8 @@ type RegulatoryPublishResponse = {
   review_decision: string | null;
   impact_status: string;
   impact_level: string | null;
+  published_by_user_id: number;
+  published_by_name: string;
   published_at: string;
   message: string;
 };
@@ -447,9 +451,36 @@ type ImpactLevel =
   };
 
 
+  type RegulatoryProvisionReviewHistory = {
+    id: number;
+
+    provision_impact_id:
+      number;
+
+    review_status:
+      string;
+
+    review_notes:
+      string;
+
+    reviewed_by_user_id:
+      | number
+      | null;
+
+    reviewed_at:
+      string;
+
+    created_at:
+      string;
+  };
+
+
   type RegulatoryProvisionImpactDetail = {
     impact:
       RegulatoryProvisionImpact;
+
+    review_history:
+      RegulatoryProvisionReviewHistory[];
 
     regulation:
       | RegulatoryKnowledgeRegulation
@@ -724,19 +755,31 @@ export default function RegulatoryChangeReviewPage() {
   >({});
 
   const [
+    expandedReviewHistories,
+    setExpandedReviewHistories,
+  ] = useState<
+    Record<number, boolean>
+  >({});
+
+  const [
     isReviewingProvision,
     setIsReviewingProvision,
   ] = useState(false);
 
   const provisionImpactSectionRef =
-  useRef<HTMLDivElement | null>(
-    null
+    useRef<HTMLDivElement | null>(
+      null
   );
 
   const structuredAnalysisSectionRef =
-  useRef<HTMLDivElement | null>(
-    null
+    useRef<HTMLDivElement | null>(
+      null
   );
+
+  const publicationSectionRef =
+    useRef<HTMLDivElement | null>(
+      null
+    );
 
   const [
     isValidatingAnalysis,
@@ -946,6 +989,11 @@ export default function RegulatoryChangeReviewPage() {
   const [
     shouldScrollToStructuredAnalysis,
     setShouldScrollToStructuredAnalysis,
+  ] = useState(false);
+
+  const [
+    shouldScrollToPublication,
+    setShouldScrollToPublication,
   ] = useState(false);
 
   const [
@@ -1705,6 +1753,52 @@ export default function RegulatoryChangeReviewPage() {
     );
 
 
+  useEffect(
+    () => {
+      if (
+        !shouldScrollToPublication
+          || isLoading
+          || !evidence
+          || evidence.change
+            .review_decision
+            !== "confirmed"
+        ) {
+          return;
+        }
+
+        const frameId =
+           requestAnimationFrame(
+             () => {
+               publicationSectionRef
+                 .current
+                 ?.scrollIntoView({
+                   behavior:
+                     "smooth",
+
+                   block:
+                     "start",
+                 });
+
+               setShouldScrollToPublication(
+                 false
+               );
+             }
+           );
+
+         return () => {
+           cancelAnimationFrame(
+             frameId
+           );
+         };
+      },
+       [
+         shouldScrollToPublication,
+         isLoading,
+         evidence,
+       ]
+    );
+    
+
   const selectedAnalysis =
     useMemo(
       () =>
@@ -1866,31 +1960,56 @@ export default function RegulatoryChangeReviewPage() {
           evidence,
         ]
       );
+  
+  
+  const hasValidAnalysisValidationNotes =
+    useMemo(
+      () =>
+        validationNotes
+          .trim()
+          .length >= 10,
+      [
+        validationNotes,
+      ]
+    );
 
 
   const canPublish =
-    useMemo(
-      () =>
-        Boolean(
-          evidence
-          && evidence.change
-            .review_status
-            === "reviewed"
-          && evidence.change
-            .review_decision
-            === "confirmed"
-          && evidence.change
-            .impact_status
-            === "analysed"
-          && evidence.change
-            .impact_level
-          && !evidence.change
-            .published_at
-        ),
-      [
-        evidence,
-      ]
-    );
+  useMemo(
+    () =>
+      Boolean(
+        evidence
+        && selectedAnalysis
+        && analysisDetail
+        && evidence.change
+          .review_status
+          === "reviewed"
+        && evidence.change
+          .review_decision
+          === "confirmed"
+        && evidence.change
+          .impact_status
+          === "analysed"
+        && evidence.change
+          .impact_level
+        && selectedAnalysis
+          .analysis_status
+          === "validated"
+        && analysisDetail
+          .provision_count > 0
+        && analysisDetail
+          .validated_provision_count
+          === analysisDetail
+            .provision_count
+        && !evidence.change
+          .published_at
+      ),
+    [
+      evidence,
+      selectedAnalysis,
+      analysisDetail,
+    ]
+  );
 
 
   async function submitReview() {
@@ -3783,6 +3902,10 @@ function beginEditProvisionImpact(
           "Structured regulatory analysis "
           + "validated successfully."
         )
+      );
+
+      setShouldScrollToPublication(
+        true
       );
 
 
@@ -6841,6 +6964,32 @@ function beginEditProvisionImpact(
                               const impact =
                                 detail.impact;
                               
+                              const reviewHistory =
+                                detail.review_history;
+
+                              const isReviewHistoryExpanded =
+                                expandedReviewHistories[
+                                  impact.id
+                                ] ?? false;
+
+                              const hiddenReviewCount =
+                                Math.max(
+                                  reviewHistory.length - 3,
+                                  0
+                                );
+
+                              const visibleReviewHistory =
+                                reviewHistory.length <= 3
+                                || isReviewHistoryExpanded
+                                  ? reviewHistory
+                                  : reviewHistory.slice(
+                                      -3
+                                    );
+
+                              const visibleReviewStartIndex =
+                                reviewHistory.length
+                                - visibleReviewHistory.length;
+
                               const provisionReviewNote =
                                 (
                                   provisionReviewNotes[
@@ -7572,105 +7721,291 @@ function beginEditProvisionImpact(
                                   }
 
 
-                                  {
-                                    impact.review_status !== "pending_review"
-                                    && (
                                       <div
                                         style={{
-                                          marginTop:
-                                            "18px",
+                                          color:
+                                            "#0f172a",
 
-                                          paddingTop:
-                                            "16px",
+                                          fontSize:
+                                            "13px",
 
-                                          borderTop:
-                                            "1px solid #e2e8f0",
+                                          fontWeight:
+                                            800,
+
+                                          marginBottom:
+                                            "12px",
                                         }}
                                       >
-                                        <div
-                                          style={{
-                                            color:
-                                              "#0f172a",
-
-                                            fontSize:
-                                              "13px",
-
-                                            fontWeight:
-                                              800,
-
-                                            marginBottom:
-                                              "12px",
-                                          }}
-                                        >
-                                          Human Review Record
-                                        </div>
-
-                                        <div
-                                          style={{
-                                            display:
-                                              "grid",
-
-                                            gridTemplateColumns:
-                                              "repeat(auto-fit, minmax(180px, 1fr))",
-
-                                            gap:
-                                              "14px",
-                                          }}
-                                        >
-                                          <InfoItem
-                                            label="Review Status"
-                                            value={
-                                              formatStatus(
-                                                impact.review_status
-                                              )
-                                            }
-                                          />
-
-                                          <InfoItem
-                                            label="Reviewed By"
-                                            value={
-                                              impact.reviewed_by_user_id
-                                                ? (
-                                                    `User #`
-                                                    + `${impact.reviewed_by_user_id}`
-                                                  )
-                                                : "Not available"
-                                            }
-                                          />
-
-                                          <InfoItem
-                                            label="Reviewed At"
-                                            value={
-                                              impact.reviewed_at
-                                                ? formatDate(
-                                                    impact.reviewed_at
-                                                  )
-                                                : "Not available"
-                                            }
-                                          />
-                                        </div>
-
-                                        {
-                                          impact.review_notes
-                                          && (
-                                            <div
-                                              style={{
-                                                marginTop:
-                                                  "10px",
-                                              }}
-                                            >
-                                              <InfoItem
-                                                label="Review Notes"
-                                                value={
-                                                  impact.review_notes
-                                                }
-                                              />
-                                            </div>
-                                          )
-                                        }
+                                        Human Review History
                                       </div>
-                                    )
-                                  }
+
+
+                                      {
+                                        detail.review_history
+                                          .length > 0
+                                          ? (
+                                            <>
+                                              <div
+                                                style={{
+                                                  display:
+                                                    "grid",
+
+                                                  gap:
+                                                    "12px",
+                                                }}
+                                              >
+                                                {
+                                                  visibleReviewHistory
+                                                    .map(
+                                                      (
+                                                        review,
+                                                        index
+                                                      ) => (
+                                                        <div
+                                                          key={
+                                                            review.id
+                                                          }
+                                                          style={{
+                                                            padding:
+                                                              "14px",
+
+                                                            border:
+                                                              "1px solid #dbe3ef",
+
+                                                            borderRadius:
+                                                              "10px",
+
+                                                            backgroundColor:
+                                                              "#ffffff",
+                                                          }}
+                                                        >
+                                                          <div
+                                                            style={{
+                                                              marginBottom:
+                                                                "10px",
+
+                                                              color:
+                                                                "#0f172a",
+
+                                                              fontSize:
+                                                                "12px",
+
+                                                              fontWeight:
+                                                                800,
+                                                            }}
+                                                          >
+                                                            {
+                                                              `Review #${
+                                                                visibleReviewStartIndex
+                                                                + index
+                                                                + 1
+                                                              }`
+                                                            }
+                                                          </div>
+
+
+                                                          <div
+                                                            style={{
+                                                              display:
+                                                                "grid",
+
+                                                              gridTemplateColumns:
+                                                                "repeat(auto-fit, minmax(180px, 1fr))",
+
+                                                              gap:
+                                                                "14px",
+                                                            }}
+                                                          >
+                                                            <InfoItem
+                                                              label=
+                                                                "Review Status"
+                                                              value={
+                                                                formatStatus(
+                                                                  review
+                                                                    .review_status
+                                                                )
+                                                              }
+                                                            />
+
+                                                            <InfoItem
+                                                              label=
+                                                                "Reviewed By"
+                                                              value={
+                                                                review
+                                                                  .reviewed_by_user_id
+                                                                  ? (
+                                                                      `User #`
+                                                                      + `${review.reviewed_by_user_id}`
+                                                                    )
+                                                                  : "Not available"
+                                                              }
+                                                            />
+
+                                                            <InfoItem
+                                                              label=
+                                                                "Reviewed At"
+                                                              value={
+                                                                formatDate(
+                                                                  review
+                                                                    .reviewed_at
+                                                                )
+                                                              }
+                                                            />
+                                                          </div>
+
+                                                          <div
+                                                            style={{
+                                                              marginTop:
+                                                                "10px",
+                                                            }}
+                                                          >
+                                                            <InfoItem
+                                                              label=
+                                                                "Review Notes"
+                                                              value={
+                                                                review
+                                                                  .review_notes
+                                                              }
+                                                            />
+                                                          </div>
+                                                        </div>
+                                                      )
+                                                    )
+                                                }
+                                                </div>
+
+                                                  {
+                                                    hiddenReviewCount > 0
+                                                    && (
+                                                      <div
+                                                        style={{
+                                                          marginTop:
+                                                            "10px",
+
+                                                          display:
+                                                            "flex",
+
+                                                          justifyContent:
+                                                            "flex-start",
+                                                        }}
+                                                      >
+                                                        <button
+                                                          type="button"
+                                                          onClick={
+                                                            () => {
+                                                              setExpandedReviewHistories(
+                                                                (
+                                                                  previous
+                                                                ) => ({
+                                                                  ...previous,
+
+                                                                  [impact.id]:
+                                                                    !isReviewHistoryExpanded,
+                                                                })
+                                                              );
+                                                            }
+                                                          }
+                                                          style={{
+                                                            ...secondaryButtonStyle,
+
+                                                            padding:
+                                                              "7px 12px",
+
+                                                            fontSize:
+                                                              "12px",
+                                                          }}
+                                                        >
+                                                          {
+                                                            isReviewHistoryExpanded
+                                                              ? "Hide earlier reviews"
+                                                              : (
+                                                                  `Show earlier reviews `
+                                                                  + `(${hiddenReviewCount})`
+                                                                )
+                                                          }
+                                                        </button>
+                                                      </div>
+                                                    )
+                                                  }
+                                                </>
+                                              )
+                                            : (
+                                              <div>
+                                                <div
+                                                  style={{
+                                                    display:
+                                                      "grid",
+
+                                                    gridTemplateColumns:
+                                                      "repeat(auto-fit, minmax(180px, 1fr))",
+
+                                                    gap:
+                                                      "14px",
+                                                  }}
+                                                >
+                                                  <InfoItem
+                                                    label=
+                                                      "Review Status"
+                                                    value={
+                                                      formatStatus(
+                                                        impact
+                                                          .review_status
+                                                      )
+                                                    }
+                                                  />
+
+                                                  <InfoItem
+                                                    label=
+                                                      "Reviewed By"
+                                                    value={
+                                                      impact
+                                                        .reviewed_by_user_id
+                                                        ? (
+                                                            `User #`
+                                                            + `${impact.reviewed_by_user_id}`
+                                                          )
+                                                        : "Not available"
+                                                    }
+                                                  />
+
+                                                  <InfoItem
+                                                    label=
+                                                      "Reviewed At"
+                                                    value={
+                                                      impact
+                                                        .reviewed_at
+                                                        ? formatDate(
+                                                            impact
+                                                              .reviewed_at
+                                                          )
+                                                        : "Not available"
+                                                    }
+                                                  />
+                                                </div>
+
+                                                {
+                                                  impact.review_notes
+                                                  && (
+                                                    <div
+                                                      style={{
+                                                        marginTop:
+                                                          "10px",
+                                                      }}
+                                                    >
+                                                      <InfoItem
+                                                        label=
+                                                          "Review Notes"
+                                                        value={
+                                                          impact
+                                                            .review_notes
+                                                        }
+                                                      />
+                                                    </div>
+                                                  )
+                                                }
+                                              </div>
+                                            )
+                                      }
 
                                   
                                   {
@@ -7819,6 +8154,27 @@ function beginEditProvisionImpact(
                                     1.6,
                                 }}
                               />
+                            
+                              <div
+                                  style={{
+                                    marginTop:
+                                      "6px",
+
+                                    color:
+                                      hasValidAnalysisValidationNotes
+                                        ? "#166534"
+                                        : "#64748b",
+
+                                    fontSize:
+                                      "12px",
+                                  }}
+                                >
+                                  {
+                                    hasValidAnalysisValidationNotes
+                                      ? "Validation notes requirement satisfied."
+                                      : "Minimum 10 characters required."
+                                  }
+                                </div>
                             </div>
 
 
@@ -7843,6 +8199,7 @@ function beginEditProvisionImpact(
                                 }
                                 disabled={
                                   isValidatingAnalysis
+                                  || !hasValidAnalysisValidationNotes
                                   || analysisDetail.provision_count < 1
                                   || analysisDetail
                                     .validated_provision_count
@@ -7855,6 +8212,7 @@ function beginEditProvisionImpact(
                                   backgroundColor:
                                     (
                                       isValidatingAnalysis
+                                      || !hasValidAnalysisValidationNotes
                                       || analysisDetail.provision_count < 1
                                       || analysisDetail
                                         .validated_provision_count
@@ -7867,6 +8225,7 @@ function beginEditProvisionImpact(
                                   opacity:
                                     (
                                       isValidatingAnalysis
+                                      || !hasValidAnalysisValidationNotes
                                       || analysisDetail.provision_count < 1
                                       || analysisDetail
                                          .validated_provision_count
@@ -7879,6 +8238,7 @@ function beginEditProvisionImpact(
                                   cursor:
                                     (
                                       isValidatingAnalysis
+                                      || !hasValidAnalysisValidationNotes
                                       || analysisDetail.provision_count < 1
                                       || analysisDetail
                                         .validated_provision_count
@@ -7899,24 +8259,142 @@ function beginEditProvisionImpact(
                           </>
                         )
                         : (
-                          <MessageBox
-                            tone="success"
-                          >
-                            This structured regulatory
-                            analysis is no longer editable.
-                            Current status:{" "}
-                            <strong>
-                              {
-                                formatStatus(
-                                  analysisDetail
-                                    .analysis
-                                    .analysis_status
-                                )
-                              }
-                            </strong>
-                            .
-                          </MessageBox>
-                        )
+                            <div
+                              style={{
+                                display:
+                                  "grid",
+
+                                gap:
+                                  "14px",
+                              }}
+                            >
+                              <MessageBox
+                                tone="success"
+                              >
+                                This structured regulatory
+                                analysis is no longer editable.
+                                Current status:{" "}
+                                <strong>
+                                  {
+                                    formatStatus(
+                                      analysisDetail
+                                        .analysis
+                                        .analysis_status
+                                    )
+                                  }
+                                </strong>
+                                .
+                              </MessageBox>
+
+                              <div
+                                style={{
+                                  padding:
+                                    "16px",
+
+                                  border:
+                                    "1px solid #dbe3ef",
+
+                                  borderRadius:
+                                    "10px",
+
+                                  backgroundColor:
+                                    "#ffffff",
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    marginBottom:
+                                      "12px",
+
+                                    color:
+                                      "#0f172a",
+
+                                    fontSize:
+                                      "13px",
+
+                                    fontWeight:
+                                      800,
+                                  }}
+                                >
+                                  Structured Analysis Validation Record
+                                </div>
+
+                                <div
+                                  style={{
+                                    display:
+                                      "grid",
+
+                                    gridTemplateColumns:
+                                      "repeat(auto-fit, minmax(180px, 1fr))",
+
+                                    gap:
+                                      "14px",
+                                  }}
+                                >
+                                  <InfoItem
+                                    label=
+                                      "Validation Status"
+                                    value={
+                                      formatStatus(
+                                        analysisDetail
+                                          .analysis
+                                          .analysis_status
+                                      )
+                                    }
+                                  />
+
+                                  <InfoItem
+                                    label=
+                                      "Validated By"
+                                    value={
+                                      analysisDetail
+                                        .analysis
+                                        .validated_by_user_id
+                                        ? (
+                                            `User #`
+                                            + `${analysisDetail.analysis.validated_by_user_id}`
+                                          )
+                                        : "Not available"
+                                    }
+                                  />
+
+                                  <InfoItem
+                                    label=
+                                      "Validated At"
+                                    value={
+                                      analysisDetail
+                                        .analysis
+                                        .validated_at
+                                        ? formatDate(
+                                            analysisDetail
+                                              .analysis
+                                              .validated_at
+                                          )
+                                        : "Not available"
+                                    }
+                                  />
+                                </div>
+
+                                <div
+                                  style={{
+                                    marginTop:
+                                      "12px",
+                                  }}
+                                >
+                                  <InfoItem
+                                    label=
+                                      "Validation Notes"
+                                    value={
+                                      analysisDetail
+                                        .analysis
+                                        .validation_notes
+                                        ?? "Not available"
+                                    }
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          )
                     }
                   </div>
                 )
@@ -8417,268 +8895,368 @@ function beginEditProvisionImpact(
           change.review_decision
           === "confirmed"
           && (
-            <SectionCard>
-              <div
-                style={{
-                  display:
-                    "flex",
+            <div
+              ref={
+                publicationSectionRef
+              }
+            >
+              <SectionCard>
+                <div
+                  style={{
+                    display:
+                      "flex",
 
-                  justifyContent:
-                    "space-between",
+                    justifyContent:
+                      "space-between",
 
-                  alignItems:
-                    "flex-start",
+                    alignItems:
+                      "flex-start",
 
-                  gap:
-                    "16px",
+                    gap:
+                      "16px",
 
-                  flexWrap:
-                    "wrap",
+                    flexWrap:
+                      "wrap",
 
-                  marginBottom:
-                    "18px",
-                }}
-              >
-                <div>
-                  <h2
-                    style={{
-                      margin:
-                        "0 0 6px",
+                    marginBottom:
+                      "18px",
+                  }}
+                >
+                  <div>
+                    <h2
+                      style={{
+                        margin:
+                          "0 0 6px",
 
-                      fontSize:
-                        "21px",
-                    }}
-                  >
-                    Publication
-                  </h2>
+                        fontSize:
+                          "21px",
+                      }}
+                    >
+                      Publication
+                    </h2>
 
-                  <p
-                    style={{
-                      margin:
-                        0,
+                    <p
+                      style={{
+                        margin:
+                          0,
 
-                      color:
-                        "#64748b",
+                        color:
+                          "#64748b",
 
-                      fontSize:
-                        "14px",
+                        fontSize:
+                          "14px",
 
-                      lineHeight:
-                        1.6,
-                    }}
-                  >
-                    Publish verified regulatory
-                    intelligence after regulatory
-                    review and impact analysis
-                    have been completed.
-                  </p>
+                        lineHeight:
+                          1.6,
+                      }}
+                    >
+                      Publish verified regulatory
+                      intelligence after regulatory
+                      review, impact analysis and
+                      structured analysis validation
+                      have been completed.
+                    </p>
+                  </div>
+
+
+                  {
+                    change.published_at
+                    ? (
+                      <StatusBadge
+                        text="Published"
+                        tone="success"
+                      />
+                    )
+                    : canPublish
+                      ? (
+                        <StatusBadge
+                          text="Ready to Publish"
+                          tone="success"
+                        />
+                      )
+                      : (
+                        <StatusBadge
+                          text="Not Ready"
+                          tone="warning"
+                        />
+                      )
+                  }
                 </div>
 
 
                 {
                   change.published_at
                   ? (
-                    <StatusBadge
-                      text="Published"
+                    <MessageBox
                       tone="success"
-                    />
+                    >
+                      This regulatory intelligence
+                      was published on{" "}
+                      <strong>
+                        {
+                          formatDate(
+                            change.published_at
+                          )
+                        }
+                      </strong>
+                      {
+                        change.published_by_name
+                        ? (
+                            <>
+                              {" "}by{" "}
+                              <strong>
+                                {
+                                  change.published_by_name
+                                }
+                              </strong>
+                            </>
+                          )
+                        : null
+                      }
+                      . The regulatory review,
+                      impact analysis and structured
+                      regulatory analysis are now
+                      read-only.
+                    </MessageBox>
                   )
                   : canPublish
                     ? (
-                      <StatusBadge
-                        text="Ready to Publish"
-                        tone="success"
-                      />
+                      <MessageBox
+                        tone="warning"
+                      >
+                        Regulatory review and impact
+                        analysis are complete.
+                        Publishing will create the
+                        verified TrustGRC regulatory
+                        intelligence record and lock
+                        the workflow against further
+                        modification.
+                      </MessageBox>
                     )
                     : (
-                      <StatusBadge
-                        text="Not Ready"
+                      <MessageBox
                         tone="warning"
-                      />
+                      >
+                        {
+                          change.review_status
+                          !== "reviewed"
+                            ? (
+                                "Publication is not yet "
+                                + "available. Complete the "
+                                + "regulatory review first."
+                              )
+                            : change.review_decision
+                              !== "confirmed"
+                              ? (
+                                  "Publication is not yet "
+                                  + "available. Confirm the "
+                                  + "regulatory change first."
+                                )
+                              : change.impact_status
+                                !== "analysed"
+                                ? (
+                                    "Publication is not yet "
+                                    + "available. Complete the "
+                                    + "impact analysis first."
+                                  )
+                                : !change.impact_level
+                                  ? (
+                                      "Publication is not yet "
+                                      + "available. Record the "
+                                      + "impact level first."
+                                    )
+                                  : !selectedAnalysis
+                                    ? (
+                                        "Publication is not yet "
+                                        + "available. Create a "
+                                        + "structured regulatory "
+                                        + "analysis first."
+                                      )
+                                    : selectedAnalysis
+                                        .analysis_status
+                                      !== "validated"
+                                      ? (
+                                          "Publication is not yet "
+                                          + "available. The latest "
+                                          + "structured regulatory "
+                                          + "analysis version must "
+                                          + "be validated before "
+                                          + "publication."
+                                        )
+                                      : (
+                                          "Publication is not yet "
+                                          + "available. Complete "
+                                          + "all required workflow "
+                                          + "steps before "
+                                          + "publication."
+                                        )
+                        }
+                      </MessageBox>
                     )
                 }
-              </div>
 
 
-              {
-                change.published_at
-                ? (
-                  <MessageBox
-                    tone="success"
-                  >
-                    This regulatory intelligence
-                    was published on{" "}
-                    <strong>
-                      {
-                        formatDate(
-                          change.published_at
-                        )
-                      }
-                    </strong>
-                    . The regulatory review and
-                    impact analysis are now
-                    read-only.
-                  </MessageBox>
-                )
-                : canPublish
-                  ? (
-                    <MessageBox
-                      tone="warning"
-                    >
-                      Regulatory review and impact
-                      analysis are complete.
-                      Publishing will create the
-                      verified TrustGRC regulatory
-                      intelligence record and lock
-                      the workflow against further
-                      modification.
-                    </MessageBox>
-                  )
-                  : (
-                    <MessageBox
-                      tone="warning"
-                    >
-                      Publication is not yet
-                      available. Complete and
-                      confirm the regulatory
-                      review and impact analysis
-                      first.
-                    </MessageBox>
-                  )
-              }
+                <div
+                  style={{
+                    display:
+                      "grid",
+
+                    gridTemplateColumns:
+                      "repeat(auto-fit, minmax(220px, 1fr))",
+
+                    gap:
+                      "14px",
+
+                    marginTop:
+                      "18px",
+                  }}
+                >
+                  <InfoItem
+                    label="Review Status"
+                    value={
+                      formatStatus(
+                        change.review_status
+                      )
+                    }
+                  />
+
+                  <InfoItem
+                    label="Review Decision"
+                    value={
+                      change.review_decision
+                        ? formatStatus(
+                            change
+                              .review_decision
+                          )
+                        : "Not reviewed"
+                    }
+                  />
+
+                  <InfoItem
+                    label="Impact Status"
+                    value={
+                      formatStatus(
+                        change.impact_status
+                      )
+                    }
+                  />
+
+                  <InfoItem
+                    label="Impact Level"
+                    value={
+                      change.impact_level
+                        ? formatStatus(
+                            change.impact_level
+                          )
+                        : "Not available"
+                    }
+                  />
+
+                  <InfoItem
+                    label="Structured Analysis Status"
+                    value={
+                      selectedAnalysis
+                        ? (
+                            `Version `
+                            + `${selectedAnalysis.analysis_version}`
+                            + " — "
+                            + formatStatus(
+                                selectedAnalysis
+                                  .analysis_status
+                              )
+                          )
+                        : "Not available"
+                    }
+                  />
+                </div>
 
 
-              <div
-                style={{
-                  display:
-                    "grid",
-
-                  gridTemplateColumns:
-                    "repeat(auto-fit, minmax(220px, 1fr))",
-
-                  gap:
-                    "14px",
-
-                  marginTop:
-                    "18px",
-                }}
-              >
-                <InfoItem
-                  label="Review Status"
-                  value={
-                    formatStatus(
-                      change.review_status
-                    )
-                  }
-                />
-
-                <InfoItem
-                  label="Review Decision"
-                  value={
-                    change.review_decision
-                      ? formatStatus(
-                          change
-                            .review_decision
-                        )
-                      : "Not reviewed"
-                  }
-                />
-
-                <InfoItem
-                  label="Impact Status"
-                  value={
-                    formatStatus(
-                      change.impact_status
-                    )
-                  }
-                />
-
-                <InfoItem
-                  label="Impact Level"
-                  value={
-                    change.impact_level
-                      ? formatStatus(
-                          change.impact_level
-                        )
-                      : "Not available"
-                  }
-                />
-              </div>
-
-
-              {
-                change.published_at
-                && (
-                  <div
-                    style={{
-                      marginTop:
-                        "14px",
-                    }}
-                  >
-                    <InfoItem
-                      label="Published At"
-                      value={
-                        formatDate(
-                          change.published_at
-                        )
-                      }
-                    />
-                  </div>
-                )
-              }
-
-
-              {
-                !change.published_at
-                && (
-                  <div
-                    style={{
-                      marginTop:
-                        "20px",
-
-                      display:
-                        "flex",
-
-                      justifyContent:
-                        "flex-end",
-                    }}
-                  >
-                    <button
-                      type="button"
-                      onClick={
-                        () => {
-                          void publishRegulatoryIntelligence();
-                        }
-                      }
-                      disabled={
-                        !canPublish
-                        || isPublishing
-                      }
+                {
+                  change.published_at
+                  && (
+                    <div
                       style={{
-                        ...primaryButtonStyle,
-
-                        backgroundColor:
-                          !canPublish
-                            ? "#94a3b8"
-                            : "#16a34a",
-
-                        cursor:
-                          !canPublish
-                            ? "not-allowed"
-                            : "pointer",
+                        marginTop:
+                          "14px",
+                        display: "grid",
+                        gridTemplateColumns:
+                          "repeat(auto-fit, minmax(220px, 1fr))",
+                        gap: "16px",
                       }}
                     >
-                      {
-                        isPublishing
-                          ? "Publishing..."
-                          : "Publish Regulatory Intelligence"
-                      }
-                    </button>
-                  </div>
-                )
-              }
-            </SectionCard>
-          )
+                      <InfoItem
+                        label="Published By"
+                        value={
+                          change.published_by_name
+                          || ""
+                        }
+                      />
+
+                      <InfoItem
+                        label="Published At"
+                        value={
+                          formatDate(
+                            change.published_at
+                          )
+                        }
+                      />
+                    </div>
+                  )
+                }
+
+
+                {
+                  !change.published_at
+                  && (
+                    <div
+                      style={{
+                        marginTop:
+                          "20px",
+
+                        display:
+                          "flex",
+
+                        justifyContent:
+                          "flex-end",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={
+                          () => {
+                            void publishRegulatoryIntelligence();
+                          }
+                        }
+                        disabled={
+                          !canPublish
+                          || isPublishing
+                        }
+                        style={{
+                          ...primaryButtonStyle,
+
+                          backgroundColor:
+                            !canPublish
+                              ? "#94a3b8"
+                              : "#16a34a",
+
+                          cursor:
+                            !canPublish
+                              ? "not-allowed"
+                              : "pointer",
+                        }}
+                      >
+                        {
+                          isPublishing
+                            ? "Publishing..."
+                            : "Publish Regulatory Intelligence"
+                        }
+                      </button>
+                    </div>
+                  )
+                }
+              </SectionCard>
+            </div>
+            )
         }
 
 

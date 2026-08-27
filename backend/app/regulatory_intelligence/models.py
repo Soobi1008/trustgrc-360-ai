@@ -358,6 +358,18 @@ class RegulatoryChange(Base):
     # PUBLICATION / LIFECYCLE
     # -----------------------------------------------------
 
+    published_by_user_id: Mapped[
+        int | None
+    ] = mapped_column(
+        ForeignKey(
+            "users.id",
+            ondelete="SET NULL",
+        ),
+        nullable=True,
+        index=True,
+    )
+
+    
     published_at: Mapped[
         datetime | None
     ] = mapped_column(
@@ -392,6 +404,31 @@ class RegulatoryChange(Base):
             reviewed_by_user_id
         ],
     )
+
+    published_by: Mapped[
+        "User | None"
+    ] = relationship(
+        "User",
+        foreign_keys=[
+            published_by_user_id
+        ],
+    )
+
+
+    @property
+    def published_by_name(
+        self,
+    ) -> str | None:
+        if (
+            self.published_by
+            is None
+        ):
+            return None
+
+        return (
+            self.published_by.full_name
+        )
+
 
     analyses: Mapped[
         list[
@@ -1067,6 +1104,117 @@ class RegulatoryChangeProvisionImpact(Base):
         foreign_keys=[
             source_snapshot_id
         ],
+    )
+
+    reviewed_by: Mapped[
+        "User | None"
+    ] = relationship(
+        "User",
+        foreign_keys=[
+            reviewed_by_user_id
+        ],
+    )
+
+    review_history: Mapped[
+        list[
+            "RegulatoryChangeProvisionReview"
+        ]
+    ] = relationship(
+        "RegulatoryChangeProvisionReview",
+        back_populates="provision_impact",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by=(
+            "RegulatoryChangeProvisionReview."
+            "reviewed_at"
+        ),
+    )
+
+
+    # =========================================================
+# PHASE 2 - PROVISION REVIEW HISTORY
+# =========================================================
+
+class RegulatoryChangeProvisionReview(Base):
+    """
+    Append-only human review history for a
+    regulatory provision impact.
+
+    Each review event records the status,
+    review note, reviewer and timestamp so
+    previous review evidence is preserved.
+    """
+
+    __tablename__ = (
+        "regulatory_change_provision_reviews"
+    )
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        index=True,
+    )
+
+    provision_impact_id: Mapped[
+        int
+    ] = mapped_column(
+        ForeignKey(
+            "regulatory_change_provision_impacts.id",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+        index=True,
+    )
+
+    review_status: Mapped[
+        str
+    ] = mapped_column(
+        String(50),
+        nullable=False,
+        index=True,
+    )
+
+    review_notes: Mapped[
+        str
+    ] = mapped_column(
+        Text,
+        nullable=False,
+    )
+
+    reviewed_by_user_id: Mapped[
+        int | None
+    ] = mapped_column(
+        ForeignKey(
+            "users.id",
+            ondelete="SET NULL",
+        ),
+        nullable=True,
+        index=True,
+    )
+
+    reviewed_at: Mapped[
+        datetime
+    ] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        index=True,
+    )
+
+    created_at: Mapped[
+        datetime
+    ] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        index=True,
+    )
+
+    provision_impact: Mapped[
+        "RegulatoryChangeProvisionImpact"
+    ] = relationship(
+        "RegulatoryChangeProvisionImpact",
+        back_populates="review_history",
     )
 
     reviewed_by: Mapped[
