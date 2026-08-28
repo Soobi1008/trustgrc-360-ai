@@ -997,6 +997,11 @@ export default function RegulatoryChangeReviewPage() {
   ] = useState(false);
 
   const [
+    shouldScrollAfterVersionSelection,
+    setShouldScrollAfterVersionSelection,
+  ] = useState(false);
+
+  const [
     impactLevel,
     setImpactLevel,
   ] = useState<ImpactLevel>(
@@ -1109,7 +1114,7 @@ export default function RegulatoryChangeReviewPage() {
 
         const preferred =
           preferredAnalysisId
-          ?? selectedAnalysisId;
+          ?? null;
 
         const validPreferred =
           preferred
@@ -1143,7 +1148,6 @@ export default function RegulatoryChangeReviewPage() {
       [
         changeId,
         router,
-        selectedAnalysisId,
       ]
     );
     
@@ -1797,6 +1801,54 @@ export default function RegulatoryChangeReviewPage() {
          evidence,
        ]
     );
+  
+  
+  useEffect(
+    () => {
+      if (
+        !shouldScrollAfterVersionSelection
+        || isLoadingAnalysis
+        || !analysisDetail
+        || selectedAnalysisId
+          === null
+        || analysisDetail.analysis.id
+          !== selectedAnalysisId
+      ) {
+        return;
+      }
+
+      const frameId =
+        requestAnimationFrame(
+          () => {
+            structuredAnalysisSectionRef
+              .current
+              ?.scrollIntoView({
+                behavior:
+                  "smooth",
+
+                block:
+                  "start",
+              });
+
+            setShouldScrollAfterVersionSelection(
+              false
+            );
+          }
+        );
+
+      return () => {
+        cancelAnimationFrame(
+          frameId
+        );
+      };
+    },
+    [
+      shouldScrollAfterVersionSelection,
+      isLoadingAnalysis,
+      analysisDetail,
+      selectedAnalysisId,
+    ]
+  );
     
 
   const selectedAnalysis =
@@ -1931,21 +1983,51 @@ export default function RegulatoryChangeReviewPage() {
     );
 
 
+    const latestAnalysis =
+      useMemo(
+        () => {
+          if (
+            analyses.length
+            === 0
+          ) {
+            return null;
+          }
+
+          return analyses.reduce(
+            (
+              latest,
+              analysis
+            ) =>
+              analysis.analysis_version
+              > latest.analysis_version
+                ? analysis
+                : latest
+          );
+        },
+        [
+          analyses,
+        ]
+      );
+
+
     const canCreateNewAnalysisVersion =
       useMemo(
         () =>
           Boolean(
-            selectedAnalysis
+            latestAnalysis
+            && selectedAnalysis
             && analysisDetail
             && !evidence?.change
               .published_at
+            && selectedAnalysis.id
+              === latestAnalysis.id
             && (
-              selectedAnalysis
+              latestAnalysis
                 .analysis_status
-              === "validated"
-              || selectedAnalysis
+                === "validated"
+              || latestAnalysis
                 .analysis_status
-              === "published"
+                === "published"
             )
             && analysisDetail
               .provision_count > 0
@@ -1955,6 +2037,7 @@ export default function RegulatoryChangeReviewPage() {
                 .provision_count
           ),
         [
+          latestAnalysis,
           selectedAnalysis,
           analysisDetail,
           evidence,
@@ -2368,10 +2451,16 @@ export default function RegulatoryChangeReviewPage() {
         analysisId
       );
 
+      setShouldScrollAfterVersionSelection(
+        true
+      );
+
       await loadAnalysisDetail(
         token,
         analysisId
       );
+
+      
 
     } catch (error) {
       console.error(
@@ -2657,18 +2746,23 @@ export default function RegulatoryChangeReviewPage() {
 
 
       requestAnimationFrame(
-        () => {
-          structuredAnalysisSectionRef
-            .current
-            ?.scrollIntoView({
-              behavior:
-                "smooth",
+          () => {
+            requestAnimationFrame(
+              () => {
+                structuredAnalysisSectionRef
+                  .current
+                  ?.scrollIntoView({
+                    behavior:
+                      "smooth",
 
-              block:
-                "start",
-            });
-        }
-      );
+                    block:
+                      "start",
+                  });
+              }
+            );
+          }
+        );
+      
 
 
     } catch (error) {
@@ -2727,8 +2821,9 @@ export default function RegulatoryChangeReviewPage() {
     const confirmed =
       window.confirm(
         "Publish this regulatory intelligence?\n\n"
-        + "Once published, the regulatory review "
-        + "and impact analysis will become read-only."
+        + "Once published, the regulatory review, "
+        + "and impact analysis and structured regulatory analysis "
+        + "will become read-only."
       );
 
 

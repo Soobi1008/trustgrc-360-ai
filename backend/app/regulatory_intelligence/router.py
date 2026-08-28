@@ -1706,6 +1706,40 @@ def create_regulatory_change_analysis(
         else None
     )
 
+
+    if (
+        latest is not None
+        and latest.analysis_status
+        != "validated"
+    ):
+        
+        raise HTTPException(
+            status_code=
+                status.HTTP_409_CONFLICT,
+            detail=(
+                "A new structured analysis version "
+                "can only be created after the latest "
+                "analysis version has been fully "
+                "validated."
+            ),
+        )
+
+    if (
+        latest is not None
+        and payload.supersedes_analysis_id
+        != latest.id
+    ):
+        raise HTTPException(
+            status_code=
+                status.HTTP_409_CONFLICT,
+            detail=(
+                "A new structured analysis version "
+                "must supersede the latest validated "
+                "analysis version."
+            ),
+        )
+
+
     if (
         latest is None
         and payload.supersedes_analysis_id
