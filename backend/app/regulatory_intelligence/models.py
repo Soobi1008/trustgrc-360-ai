@@ -962,6 +962,20 @@ class RegulatoryChangeProvisionImpact(Base):
         nullable=True,
     )
 
+    compliance_governance_impact: Mapped[
+        str | None
+    ] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    evidence_documentation: Mapped[
+        str | None
+    ] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
     recommended_action: Mapped[
         str | None
     ] = mapped_column(

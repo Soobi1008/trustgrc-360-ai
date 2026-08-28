@@ -2304,6 +2304,12 @@ def create_regulatory_provision_impact(
             operational_impact=
                 payload.operational_impact,
 
+            compliance_governance_impact=
+                payload.compliance_governance_impact,
+
+            evidence_documentation=
+                payload.evidence_documentation,
+
             recommended_action=
                 payload.recommended_action,
 

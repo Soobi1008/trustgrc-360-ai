@@ -415,6 +415,14 @@ type ImpactLevel =
       | string
       | null;
 
+    compliance_governance_impact:
+      | string
+      | null;
+
+    evidence_documentation:
+      | string
+      | null;
+
     recommended_action:
       | string
       | null;
@@ -866,6 +874,16 @@ export default function RegulatoryChangeReviewPage() {
   const [
     operationalImpact,
     setOperationalImpact,
+  ] = useState("");
+
+  const [
+    complianceGovernanceImpact,
+    setComplianceGovernanceImpact,
+  ] = useState("");
+
+  const [
+    evidenceDocumentation,
+    setEvidenceDocumentation,
   ] = useState("");
 
   const [
@@ -3079,6 +3097,14 @@ export default function RegulatoryChangeReviewPage() {
                   operationalImpact.trim()
                   || null,
 
+                compliance_governance_impact:
+                  complianceGovernanceImpact.trim()
+                  || null,
+
+                evidence_documentation:
+                  evidenceDocumentation.trim()
+                  || null,
+
                 recommended_action:
                   recommendedAction.trim()
                   || null,
@@ -3183,6 +3209,14 @@ export default function RegulatoryChangeReviewPage() {
         ""
       );
 
+      setComplianceGovernanceImpact(
+        ""
+      );
+
+      setEvidenceDocumentation(
+        ""
+      );
+
       setRecommendedAction(
         ""
       );
@@ -3198,6 +3232,21 @@ export default function RegulatoryChangeReviewPage() {
         token,
         selectedAnalysisId
       );
+
+      requestAnimationFrame(
+        () => {
+          requestAnimationFrame(
+            () => {
+              provisionImpactSectionRef.current
+                ?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "start",
+                });
+            }
+          );
+        }
+      );
+
 
     } catch (error) {
       console.error(
@@ -3411,6 +3460,14 @@ export default function RegulatoryChangeReviewPage() {
        ""
      );
 
+     setComplianceGovernanceImpact(
+       ""
+     );
+
+     setEvidenceDocumentation(
+       ""
+     );
+
      setRecommendedAction(
        ""
      );
@@ -3426,6 +3483,22 @@ export default function RegulatoryChangeReviewPage() {
        token,
        selectedAnalysisId
      );
+
+
+     requestAnimationFrame(
+      () => {
+        requestAnimationFrame(
+          () => {
+            provisionImpactSectionRef.current
+              ?.scrollIntoView({
+                behavior: "smooth",
+                block: "start",
+              });
+          }
+        );
+      }
+    );
+
 
    } catch (error) {
      console.error(
@@ -3742,6 +3815,16 @@ function beginEditProvisionImpact(
       ?? ""
     );
 
+    setComplianceGovernanceImpact(
+      impact.compliance_governance_impact
+      ?? ""
+    );
+
+    setEvidenceDocumentation(
+      impact.evidence_documentation
+      ?? ""
+    );
+
     setRecommendedAction(
       impact.recommended_action
       ?? ""
@@ -3816,6 +3899,14 @@ function beginEditProvisionImpact(
     );
 
     setOperationalImpact(
+      ""
+    );
+
+    setComplianceGovernanceImpact(
+      ""
+    );
+
+    setEvidenceDocumentation(
       ""
     );
 
@@ -6724,6 +6815,81 @@ function beginEditProvisionImpact(
                       </div>
 
 
+                      <div>
+                        <label
+                          style={
+                            labelStyle
+                          }
+                        >
+                          Compliance / Governance Impact
+                        </label>
+
+                        <textarea
+                          value={
+                            complianceGovernanceImpact
+                          }
+                          onChange={
+                            (event) =>
+                              setComplianceGovernanceImpact(
+                                event.target.value
+                              )
+                          }
+                          disabled={
+                            !isAnalysisEditable
+                            || isSavingProvision
+                          }
+                          rows={
+                            4
+                          }
+                          placeholder={
+                            "Describe the compliance, governance, "
+                            + "policy, accountability or oversight "
+                            + "impact..."
+                          }
+                          style={
+                            inputStyle
+                          }
+                        />
+                      </div>
+
+                      <div>
+                        <label
+                          style={
+                            labelStyle
+                          }
+                        >
+                          Evidence / Documentation
+                        </label>
+
+                        <textarea
+                          value={
+                            evidenceDocumentation
+                          }
+                          onChange={
+                            (event) =>
+                              setEvidenceDocumentation(
+                                event.target.value
+                              )
+                          }
+                          disabled={
+                            !isAnalysisEditable
+                            || isSavingProvision
+                          }
+                          rows={
+                            4
+                          }
+                          placeholder={
+                            "Describe the evidence, records, "
+                            + "documentation or audit artefacts "
+                            + "that should be retained..."
+                          }
+                          style={
+                            inputStyle
+                          }
+                        />
+                      </div>
+
+
                       <div
                         style={{
                           marginTop:
@@ -7420,6 +7586,47 @@ function beginEditProvisionImpact(
                                           value={
                                             impact
                                               .operational_impact
+                                          }
+                                        />
+                                      </div>
+                                    )
+                                  }
+
+
+                                  {
+                                    impact.compliance_governance_impact
+                                    && (
+                                      <div
+                                        style={{
+                                          marginTop:
+                                            "10px",
+                                        }}
+                                      >
+                                        <InfoItem
+                                          label="Compliance / Governance Impact"
+                                          value={
+                                            impact
+                                              .compliance_governance_impact
+                                          }
+                                        />
+                                      </div>
+                                    )
+                                  }
+
+                                  {
+                                    impact.evidence_documentation
+                                    && (
+                                      <div
+                                        style={{
+                                          marginTop:
+                                            "10px",
+                                        }}
+                                      >
+                                        <InfoItem
+                                          label="Evidence / Documentation"
+                                          value={
+                                            impact
+                                              .evidence_documentation
                                           }
                                         />
                                       </div>

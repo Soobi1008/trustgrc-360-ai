@@ -675,6 +675,16 @@ class RegulatoryProvisionImpactCreateRequest(
         max_length=20000,
     )
 
+    compliance_governance_impact: str | None = Field(
+        default=None,
+        max_length=20000,
+    )
+
+    evidence_documentation: str | None = Field(
+        default=None,
+        max_length=20000,
+    )
+
     recommended_action: str | None = Field(
         default=None,
         max_length=20000,
@@ -746,6 +756,8 @@ class RegulatoryProvisionImpactCreateRequest(
         "current_requirement",
         "legal_interpretation",
         "operational_impact",
+        "compliance_governance_impact",
+        "evidence_documentation",
         "recommended_action",
         "source_url",
     )
@@ -815,6 +827,16 @@ class RegulatoryProvisionImpactUpdateRequest(
         max_length=20000,
     )
 
+    compliance_governance_impact: str | None = Field(
+        default=None,
+        max_length=20000,
+    )
+
+    evidence_documentation: str | None = Field(
+        default=None,
+        max_length=20000,
+    )
+
     recommended_action: str | None = Field(
         default=None,
         max_length=20000,
@@ -873,6 +895,8 @@ class RegulatoryProvisionImpactUpdateRequest(
         "current_requirement",
         "legal_interpretation",
         "operational_impact",
+        "compliance_governance_impact",
+        "evidence_documentation",
         "recommended_action",
         "source_url",
     )
@@ -1021,6 +1045,10 @@ class RegulatoryProvisionImpactResponse(
     legal_interpretation: str | None = None
 
     operational_impact: str | None = None
+
+    compliance_governance_impact: str | None = None
+
+    evidence_documentation: str | None = None
 
     recommended_action: str | None = None
 
