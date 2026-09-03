@@ -1,23 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+//import { useRouter } from "next/navigation";
 
-import {
+/*import {
   clearAuthentication,
-} from "../../../lib/auth";
+} from "../../../lib/auth";*/
 
 
 export default function CompanyDashboard() {
-  const router = useRouter();
+  //const router = useRouter();
 
-  function handleSignOut() {
+  /*function handleSignOut() {
     clearAuthentication();
 
     router.replace(
       "/login"
     );
-  }
+  }*/
 
   return (
     <main
@@ -86,44 +86,7 @@ export default function CompanyDashboard() {
               Welcome to your Governance,
               Risk and Compliance portal.
             </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={
-              handleSignOut
-            }
-            style={{
-              padding:
-                "10px 16px",
-
-              border:
-                "1px solid #cbd5e1",
-
-              borderRadius:
-                "9px",
-
-              backgroundColor:
-                "#ffffff",
-
-              color:
-                "#334155",
-
-              cursor:
-                "pointer",
-
-              fontSize:
-                "13px",
-
-              fontWeight:
-                700,
-
-              boxShadow:
-                "0 4px 12px rgba(15, 23, 42, 0.05)",
-            }}
-          >
-            Sign Out
-          </button>
+          </div>          
         </div>
 
 

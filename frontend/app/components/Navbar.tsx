@@ -1,7 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+
+import {
+  useEffect,
+  useState,
+} from "react";
+
+import { useRouter } from "next/navigation";
+
+import {
+  type AuthUser,
+  clearAuthentication,
+  getStoredUser,
+  isCompanyRole,
+  isPlatformRole,
+} from "../../lib/auth";
 
 import "./navbar.css";
 
@@ -93,6 +107,7 @@ const companyItems = [
   },
 ];
 
+
 export default function Navbar() {
   const [
     openMenu,
@@ -100,6 +115,57 @@ export default function Navbar() {
   ] = useState<string | null>(
     null
   );
+
+
+const router = useRouter();
+
+const [
+  authenticatedUser,
+  setAuthenticatedUser,
+] = useState<AuthUser | null>(
+  null
+);
+
+  useEffect(() => {
+    setAuthenticatedUser(
+      getStoredUser()
+    );
+  }, []);
+
+  function handleSignOut() {
+    clearAuthentication();
+
+    setAuthenticatedUser(
+      null
+    );
+
+    router.replace(
+      "/"
+    );
+  }
+
+  function getDashboardHref() {
+    if (
+      authenticatedUser &&
+      isPlatformRole(
+        authenticatedUser.role
+      )
+    ) {
+      return "/admin/dashboard";
+    }
+
+    if (
+      authenticatedUser &&
+      isCompanyRole(
+        authenticatedUser.role
+      )
+    ) {
+      return "/company/dashboard";
+    }
+
+    return "/";
+  }
+
 
   const toggleMenu = (
     menu: string
@@ -339,6 +405,25 @@ export default function Navbar() {
       </nav>
 
       <div className="nav-actions">
+        {authenticatedUser ? (
+      <>
+        <Link
+          href={getDashboardHref()}
+          className="signin-link"
+        >
+          Dashboard
+        </Link>
+
+        <button
+          type="button"
+          className="register-link"
+          onClick={handleSignOut}
+        >
+          Sign out
+        </button>
+      </>
+    ) : (
+      <>
         <Link
           href="/login"
           className="signin-link"
@@ -352,6 +437,8 @@ export default function Navbar() {
         >
           Register
         </Link>
+      </>
+    )}
 
         <Link
           href="/contact"
