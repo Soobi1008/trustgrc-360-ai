@@ -75,6 +75,16 @@ export default function ResetPasswordPage() {
   ] = useState("");
 
   const [
+    showNewPassword,
+    setShowNewPassword,
+  ] = useState(false);
+
+  const [
+    showConfirmPassword,
+    setShowConfirmPassword,
+  ] = useState(false);
+
+  const [
     isSubmitting,
     setIsSubmitting,
   ] = useState(false);
@@ -661,8 +671,17 @@ export default function ResetPasswordPage() {
               >
                 New password
 
-                <input
-                  type="password"
+                <div
+                  style={{
+                    position: "relative",
+                  }}
+                >
+                  <input
+                    type={
+                      showNewPassword
+                        ? "text"
+                        : "password"
+                    }
                   required
 
                   autoComplete=
@@ -678,13 +697,64 @@ export default function ResetPasswordPage() {
                     )
                   }
 
+                  onPaste={(event) =>
+                    event.preventDefault()
+                    }
+                    onCopy={(event) =>
+                      event.preventDefault()
+                    }
+                    onCut={(event) =>
+                      event.preventDefault()
+                    }
+
                   placeholder=
                     "Enter a new password"
 
-                  style={
-                    inputStyle
-                  }
+                  style={{
+                    ...inputStyle,
+                    paddingRight: "48px",
+                  }}
                 />
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowNewPassword(
+                      (current) => !current
+                    )
+                  }
+                  aria-label={
+                    showNewPassword
+                      ? "Hide password"
+                      : "Show password"
+                  }
+                  title={
+                    showNewPassword
+                      ? "Hide password"
+                      : "Show password"
+                  }
+                  style={{
+                    position: "absolute",
+                    right: "12px",
+                    top: "50%",
+                    transform:
+                      "translateY(-50%)",
+                    border: "none",
+                    background:
+                      "transparent",
+                    cursor: "pointer",
+                    padding: 0,
+                    fontSize: "18px",
+                    lineHeight: 1,
+                  }}
+                >
+                  {
+                    showNewPassword
+                      ? "◉"
+                      : "👁"
+                  }
+                </button>
+                </div>
               </label>
 
 
@@ -698,8 +768,17 @@ export default function ResetPasswordPage() {
               >
                 Confirm new password
 
+                <div
+                  style={{
+                    position: "relative",
+                  }}
+                >
                 <input
-                  type="password"
+                   type={
+                     showConfirmPassword
+                       ? "text"
+                       : "password"
+                   }
                   required
 
                   autoComplete=
@@ -715,11 +794,22 @@ export default function ResetPasswordPage() {
                     )
                   }
 
+                  onPaste={(event) =>
+                    event.preventDefault()
+                    }
+                    onCopy={(event) =>
+                      event.preventDefault()
+                    }
+                    onCut={(event) =>
+                      event.preventDefault()
+                    }
+
                   placeholder=
                     "Repeat your new password"
 
                   style={{
                     ...inputStyle,
+                    paddingRight: "48px",
 
                     borderColor:
                       confirmPassword
@@ -730,6 +820,45 @@ export default function ResetPasswordPage() {
                   }}
                 />
 
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowConfirmPassword(
+                      (current) => !current
+                    )
+                  }
+                  aria-label={
+                    showConfirmPassword
+                      ? "Hide password"
+                      : "Show password"
+                  }
+                  title={
+                    showConfirmPassword
+                      ? "Hide password"
+                      : "Show password"
+                  }
+                  style={{
+                    position: "absolute",
+                    right: "12px",
+                    top: "50%",
+                    transform:
+                      "translateY(-50%)",
+                    border: "none",
+                    background:
+                      "transparent",
+                    cursor: "pointer",
+                    padding: 0,
+                    fontSize: "18px",
+                    lineHeight: 1,
+                  }}
+                >
+                  {
+                    showConfirmPassword
+                      ? "◉"
+                      : "👁"
+                  }
+                </button>
+                </div>
 
                 {passwordMismatch && (
                   <span

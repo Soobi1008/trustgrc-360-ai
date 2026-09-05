@@ -78,6 +78,26 @@ class RegistrationResponse(BaseModel):
     verification_url: str | None = None
 
 
+class RegistrationEmailCheckRequest(BaseModel):
+    email: EmailStr
+
+
+class RegistrationEmailCheckResponse(BaseModel):
+    available: bool
+    reason: str
+
+class RegistrationOrganizationCheckRequest(BaseModel):
+    organisation_name: str = Field(
+        min_length=2,
+        max_length=200,
+    )
+
+
+class RegistrationOrganizationCheckResponse(BaseModel):
+    available: bool
+    reason: str
+
+
 # ---------------------------------------------------------
 # EMAIL VERIFICATION
 # ---------------------------------------------------------

@@ -118,6 +118,17 @@ export default function RegisterPage() {
   ] = useState("");
 
   const [
+    registrationOrganizationCheck,
+    setRegistrationOrganizationCheck,
+  ] = useState<
+    | "idle"
+    | "checking"
+    | "available"
+    | "organization_exists"
+    | "error"
+  >("idle");
+
+  const [
     firstName,
     setFirstName,
   ] = useState("");
@@ -133,6 +144,18 @@ export default function RegisterPage() {
   ] = useState("");
 
   const [
+    registrationEmailCheck,
+    setRegistrationEmailCheck,
+  ] = useState<
+    | "idle"
+    | "checking"
+    | "available"
+    | "existing_email"
+    | "organization_exists"
+    | "error"
+  >("idle");
+  
+  const [
     password,
     setPassword,
   ] = useState("");
@@ -143,6 +166,16 @@ export default function RegisterPage() {
   ] = useState("");
 
   const [
+    showPassword,
+    setShowPassword,
+  ] = useState(false);
+
+  const [
+    showConfirmPassword,
+    setShowConfirmPassword,
+  ] = useState(false);
+
+  const [
     humanAnswer,
     setHumanAnswer,
   ] = useState("");
@@ -151,6 +184,11 @@ export default function RegisterPage() {
     acceptTerms,
     setAcceptTerms,
   ] = useState(false);
+
+  const [
+    termsError,
+    setTermsError,
+  ] = useState("");
 
   const [
     isSubmitting,
@@ -287,6 +325,176 @@ export default function RegisterPage() {
         "Business email format accepted. Email ownership will be verified during registration.",
     };
   }, [email]);
+
+
+  const checkRegistrationEmail =
+  async () => {
+    const normalizedEmail =
+      email.trim().toLowerCase();
+
+    if (
+      !normalizedEmail ||
+      !emailStatus.valid
+    ) {
+      setRegistrationEmailCheck(
+        "idle"
+      );
+      return;
+    }
+
+    setRegistrationEmailCheck(
+      "checking"
+    );
+
+    try {
+      const response =
+        await fetch(
+          "http://127.0.0.1:8000/api/v1/auth/check-registration-email",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            body: JSON.stringify({
+              email:
+                normalizedEmail,
+            }),
+          }
+        );
+
+      if (!response.ok) {
+        setRegistrationEmailCheck(
+          "error"
+        );
+        return;
+      }
+
+      const data = (await response.json()) as {
+        available: boolean;
+        reason: string;
+      };
+
+      if (
+        data.available &&
+        data.reason === "available"
+      ) {
+        setRegistrationEmailCheck(
+          "available"
+        );
+        return;
+      }
+
+      if (
+        data.reason ===
+        "existing_email"
+      ) {
+        setRegistrationEmailCheck(
+          "existing_email"
+        );
+        return;
+      }
+
+      if (
+        data.reason ===
+        "organization_exists"
+      ) {
+        setRegistrationEmailCheck(
+          "organization_exists"
+        );
+        return;
+      }
+
+      setRegistrationEmailCheck(
+        "error"
+      );
+    }
+    catch {
+      setRegistrationEmailCheck(
+        "error"
+      );
+    }
+  };
+
+
+  const checkRegistrationOrganization =
+    async () => {
+      const normalizedOrganizationName =
+        organisationName.trim();
+
+      if (
+        normalizedOrganizationName.length < 2
+      ) {
+        setRegistrationOrganizationCheck(
+          "idle"
+        );
+        return;
+      }
+
+      setRegistrationOrganizationCheck(
+        "checking"
+      );
+
+      try {
+        const response =
+          await fetch(
+            "http://127.0.0.1:8000/api/v1/auth/check-registration-organization",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+              body: JSON.stringify({
+                organisation_name:
+                  normalizedOrganizationName,
+              }),
+            }
+          );
+
+        if (!response.ok) {
+          setRegistrationOrganizationCheck(
+            "error"
+          );
+          return;
+        }
+
+        const data =
+          (await response.json()) as {
+            available: boolean;
+            reason: string;
+          };
+
+        if (
+          data.available &&
+          data.reason === "available"
+        ) {
+          setRegistrationOrganizationCheck(
+            "available"
+          );
+          return;
+        }
+
+        if (
+          data.reason ===
+          "organization_exists"
+        ) {
+          setRegistrationOrganizationCheck(
+            "organization_exists"
+          );
+          return;
+        }
+
+        setRegistrationOrganizationCheck(
+          "error"
+        );
+      }
+      catch {
+        setRegistrationOrganizationCheck(
+          "error"
+        );
+      }
+    };
 
 
   // =========================================================
@@ -437,6 +645,26 @@ export default function RegisterPage() {
   const passwordMismatch =
     confirmPassword.length > 0 &&
     password !== confirmPassword;
+  
+  
+  const registrationPath =
+  registrationEmailCheck ===
+  "existing_email"
+    ? "existing_email"
+    : registrationEmailCheck ===
+        "organization_exists"
+      ? "existing_organization"
+      : registrationEmailCheck ===
+          "available" &&
+          registrationOrganizationCheck ===
+            "organization_exists"
+        ? "existing_organization_new_domain"
+        : registrationEmailCheck ===
+            "available" &&
+            registrationOrganizationCheck ===
+              "available"
+          ? "new_organization"
+          : "pending";
 
 
   // =========================================================
@@ -619,7 +847,7 @@ export default function RegisterPage() {
 
 
     if (!acceptTerms) {
-      setErrorMessage(
+      setTermsError(
         "Please accept the Terms of Service and Privacy Notice."
       );
       return;
@@ -708,20 +936,6 @@ export default function RegisterPage() {
 
         if (
           normalizedDetail.includes(
-            "already exists"
-          ) &&
-          normalizedDetail.includes(
-            "email"
-          )
-        ) {
-          throw new Error(
-            "An account already exists for this email address. Please sign in or use password recovery."
-          );
-        }
-
-
-        if (
-          normalizedDetail.includes(
             "organisation already"
           ) ||
           normalizedDetail.includes(
@@ -732,7 +946,21 @@ export default function RegisterPage() {
           )
         ) {
           throw new Error(
-            "An organisation using this email domain already exists in TrustGRC AI 360. Please sign in or request access from your organisation administrator."
+            "Your organisation is already registered with TrustGRC AI 360. Please contact your organisation administrator to request access."
+          );
+        }
+
+
+        if (
+          normalizedDetail.includes(
+            "already exists"
+          ) &&
+          normalizedDetail.includes(
+            "email"
+          )
+        ) {
+          throw new Error(
+            "An account already exists for this email address. Please sign in or use password recovery."
           );
         }
 
@@ -1265,16 +1493,56 @@ export default function RegisterPage() {
                 value={
                   organisationName
                 }
-                onChange={(event) =>
+                onChange={(event) => {
                   setOrganisationName(
                     event.target.value
-                  )
-                }
+                  );
+
+                  setRegistrationOrganizationCheck(
+                    "idle"
+                  );
+                }}
+
+                onBlur={() => {
+                  void checkRegistrationOrganization();
+                }}
+
                 placeholder="Example Healthcare Ltd"
                 style={
                   inputStyle
                 }
               />
+
+              {registrationOrganizationCheck !==
+                "idle" && (
+                <span
+                  style={{
+                    marginTop: "-2px",
+                    color:
+                      registrationOrganizationCheck ===
+                      "organization_exists"
+                        ? "#b45309"
+                        : registrationOrganizationCheck ===
+                            "error"
+                          ? "#b45309"
+                          : "#15803d",
+                    fontSize: "12px",
+                    fontWeight: 500,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {registrationOrganizationCheck ===
+                  "checking"
+                    ? "Checking organisation registration status..."
+                    : registrationOrganizationCheck ===
+                        "available"
+                      ? "✓ Organisation name available. Continue with registration."
+                      : registrationOrganizationCheck ===
+                          "organization_exists"
+                        ? "This organisation is already registered with TrustGRC AI 360. Please enter your work email to verify your organisation and continue with the appropriate access process."
+                        : "We could not verify the organisation registration status. Please try again."}
+                </span>
+              )}
             </label>
 
             <div
@@ -1354,22 +1622,38 @@ export default function RegisterPage() {
                 value={
                   email
                 }
-                onChange={(event) =>
+                onChange={(event) => {
                   setEmail(
                     event.target.value
-                  )
-                }
+                  );
+
+                  setRegistrationEmailCheck(
+                    "idle"
+                  );
+                }}
+
+                onBlur={() => {
+                  void checkRegistrationEmail();
+                }}
                 placeholder="name@company.com"
                 style={{
                   ...inputStyle,
                   borderColor:
                     email &&
-                    emailStatus.valid
-                      ? "#86efac"
-                      : email &&
-                          !emailStatus.valid
+                    !emailStatus.valid
+                      ? "#fca5a5"
+                      : registrationEmailCheck ===
+                            "existing_email" ||
+                          registrationEmailCheck ===
+                            "organization_exists"
                         ? "#fca5a5"
-                        : "#cbd5e1",
+                        : registrationEmailCheck ===
+                            "error"
+                          ? "#f59e0b"
+                          : email &&
+                              emailStatus.valid
+                            ? "#86efac"
+                            : "#cbd5e1",
                 }}
               />
 
@@ -1379,9 +1663,17 @@ export default function RegisterPage() {
                     marginTop:
                       "-2px",
                     color:
-                      emailStatus.valid
-                        ? "#15803d"
-                        : "#b91c1c",
+                      !emailStatus.valid
+                        ? "#b91c1c"
+                        : registrationEmailCheck ===
+                              "existing_email" ||
+                            registrationEmailCheck ===
+                              "organization_exists"
+                          ? "#b91c1c"
+                          : registrationEmailCheck ===
+                              "error"
+                            ? "#b45309"
+                            : "#15803d",
                     fontSize:
                       "12px",
                     fontWeight:
@@ -1390,16 +1682,66 @@ export default function RegisterPage() {
                       1.5,
                   }}
                 >
-                  {emailStatus.valid
-                    ? "✓ "
-                    : ""}
-
-                  {
-                    emailStatus.message
-                  }
+                  {!emailStatus.valid
+                    ? emailStatus.message
+                    : registrationEmailCheck ===
+                        "checking"
+                      ? "Checking registration status..."
+                      : registrationEmailCheck ===
+                          "available"
+                        ? "✓ Business email accepted. Continue with organisation registration."
+                        : registrationEmailCheck ===
+                            "existing_email"
+                          ? "An account already exists for this email address. Please sign in or use password recovery."
+                          : registrationEmailCheck ===
+                              "organization_exists"
+                            ? "Your organisation is already registered with TrustGRC AI 360. Please contact your organisation administrator to request access."
+                            : registrationEmailCheck ===
+                                "error"
+                              ? "We could not verify the organisation registration status. Please try again."
+                              : emailStatus.message}
                 </span>
               )}
             </label>
+
+            {registrationPath ===
+              "existing_organization_new_domain" && (
+              <div
+                style={{
+                  marginTop:
+                    "14px",
+                  padding:
+                    "12px 14px",
+                  border:
+                    "1px solid #fcd34d",
+                  borderRadius:
+                    "9px",
+                  backgroundColor:
+                    "#fffbeb",
+                  color:
+                    "#92400e",
+                  fontSize:
+                    "13px",
+                  lineHeight:
+                    1.6,
+                }}
+              >
+                <strong>
+                  Organisation verification required.
+                </strong>{" "}
+                This organisation appears to already be
+                registered, but your work email domain is not
+                currently recognised for it. To protect
+                organisation data, a new organisation account
+                cannot be created automatically. Please request
+                access or verify this domain with your
+                organisation.
+              </div>
+            )}
+
+            {registrationPath ===
+              "new_organization" && (
+              <>
 
             <div
               style={{
@@ -1418,24 +1760,96 @@ export default function RegisterPage() {
               >
                 Password
 
-                <input
-                  type="password"
-                  required
-                  autoComplete=
-                    "new-password"
-                  value={
-                    password
-                  }
-                  onChange={(event) =>
-                    setPassword(
-                      event.target.value
-                    )
-                  }
-                  placeholder="Create a strong password"
-                  style={
-                    inputStyle
-                  }
-                />
+                <div
+                  style={{
+                    position:
+                      "relative",
+                  }}
+                >
+                  <input
+                    type={
+                      showPassword
+                        ? "text"
+                        : "password"
+                    }
+                    required
+                    autoComplete=
+                      "new-password"
+                    value={
+                      password
+                    }
+                    onChange={(event) =>
+                      setPassword(
+                        event.target.value
+                      )
+                    }
+
+                    onPaste={(event) =>
+                      event.preventDefault()
+                    }
+                    onCopy={(event) =>
+                      event.preventDefault()
+                    }
+                    onCut={(event) =>
+                      event.preventDefault()
+                    }
+
+                    placeholder="Create a strong password"
+                    style={{
+                      ...inputStyle,
+                      paddingRight:
+                        "48px",
+                    }}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setShowPassword(
+                        (current) =>
+                          !current
+                      )
+                    }
+                    aria-label={
+                      showPassword
+                        ? "Hide password"
+                        : "Show password"
+                    }
+                    title={
+                      showPassword
+                        ? "Hide password"
+                        : "Show password"
+                    }
+                    style={{
+                      position:
+                        "absolute",
+                      right:
+                        "12px",
+                      top:
+                        "50%",
+                      transform:
+                        "translateY(-50%)",
+                      border:
+                        "none",
+                      background:
+                        "transparent",
+                      cursor:
+                        "pointer",
+                      padding:
+                        0,
+                      fontSize:
+                        "18px",
+                      lineHeight:
+                        1,
+                    }}
+                  >
+                    {
+                      showPassword
+                        ? "◉"
+                        : "👁"
+                    }
+                  </button>
+                </div>
               </label>
 
               <label
@@ -1443,30 +1857,102 @@ export default function RegisterPage() {
               >
                 Confirm password
 
-                <input
-                  type="password"
-                  required
-                  autoComplete=
-                    "new-password"
-                  value={
-                    confirmPassword
-                  }
-                  onChange={(event) =>
-                    setConfirmPassword(
-                      event.target.value
-                    )
-                  }
-                  placeholder="Repeat password"
+                <div
                   style={{
-                    ...inputStyle,
-                    borderColor:
-                      confirmPassword
-                        ? passwordsMatch
-                          ? "#86efac"
-                          : "#ef4444"
-                        : "#cbd5e1",
+                    position:
+                      "relative",
                   }}
-                />
+                >
+                  <input
+                    type={
+                      showConfirmPassword
+                        ? "text"
+                        : "password"
+                    }
+                    required
+                    autoComplete=
+                      "new-password"
+                    value={
+                      confirmPassword
+                    }
+                    onChange={(event) =>
+                      setConfirmPassword(
+                        event.target.value
+                      )
+                    }
+
+                    onPaste={(event) =>
+                      event.preventDefault()
+                    }
+                    onCopy={(event) =>
+                      event.preventDefault()
+                    }
+                    onCut={(event) =>
+                      event.preventDefault()
+                    }
+
+                    placeholder="Repeat password"
+                    style={{
+                      ...inputStyle,
+                      paddingRight:
+                        "48px",
+                      borderColor:
+                        confirmPassword
+                          ? passwordsMatch
+                            ? "#86efac"
+                            : "#ef4444"
+                          : "#cbd5e1",
+                    }}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setShowConfirmPassword(
+                        (current) =>
+                          !current
+                      )
+                    }
+                    aria-label={
+                      showConfirmPassword
+                        ? "Hide password"
+                        : "Show password"
+                    }
+                    title={
+                      showConfirmPassword
+                        ? "Hide password"
+                        : "Show password"
+                    }
+                    style={{
+                      position:
+                        "absolute",
+                      right:
+                        "12px",
+                      top:
+                        "50%",
+                      transform:
+                        "translateY(-50%)",
+                      border:
+                        "none",
+                      background:
+                        "transparent",
+                      cursor:
+                        "pointer",
+                      padding:
+                        0,
+                      fontSize:
+                        "18px",
+                      lineHeight:
+                        1,
+                    }}
+                  >
+                    {
+                      showConfirmPassword
+                        ? "◉"
+                        : "👁"
+                    }
+                  </button>
+                </div>
 
                 {passwordMismatch && (
                   <span
@@ -1846,11 +2332,15 @@ export default function RegisterPage() {
                 checked={
                   acceptTerms
                 }
-                onChange={(event) =>
+                onChange={(event) => {
                   setAcceptTerms(
                     event.target.checked
-                  )
-                }
+                  );
+
+                  if (event.target.checked) {
+                    setTermsError("");
+                  }
+                }}
                 style={{
                   marginTop:
                     "3px",
@@ -1870,6 +2360,19 @@ export default function RegisterPage() {
                 Notice.
               </span>
             </label>
+
+            {termsError && (
+              <div
+                style={{
+                  marginTop: "8px",
+                  color: "#dc2626",
+                  fontSize: "13px",
+                  lineHeight: 1.5,
+                }}
+              >
+                {termsError}
+              </div>
+            )}
 
             <button
               type="submit"
@@ -1913,6 +2416,10 @@ export default function RegisterPage() {
                 ? "Creating account..."
                 : "Create organisation account"}
             </button>
+            
+              </>
+            )}
+
 
             <div
               style={{

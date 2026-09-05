@@ -106,12 +106,17 @@ export default function AdminLayout({
     >
       <aside
         style={{
-          minHeight: "100vh",
+          height: "100vh",
           display: "flex",
           flexDirection: "column",
           padding: "26px 18px",
           backgroundColor: "#0f172a",
           color: "#ffffff",
+          position: "sticky",
+          top: 0,
+          alignSelf: "start",
+          overflowY: "auto",
+          boxSizing: "border-box",
         }}
       >
         <div

@@ -73,6 +73,10 @@ from app.schemas.auth import (
     ForgotPasswordRequest,
     ForgotPasswordResponse,
     HumanChallengeResponse,
+    RegistrationEmailCheckRequest,
+    RegistrationEmailCheckResponse,
+    RegistrationOrganizationCheckRequest,
+    RegistrationOrganizationCheckResponse,
     RegistrationRequest,
     RegistrationResponse,
     ResendVerificationRequest,
@@ -939,6 +943,93 @@ def verify_and_consume_challenge(
 # =========================================================
 # REGISTRATION
 # =========================================================
+
+@router.post(
+    "/check-registration-email",
+    response_model=
+        RegistrationEmailCheckResponse,
+)
+def check_registration_email(
+    payload: RegistrationEmailCheckRequest,
+    db: Session = Depends(get_db),
+) -> RegistrationEmailCheckResponse:
+    normalized_email = normalize_email(
+        str(payload.email)
+    )
+
+    domain = validate_business_email(
+        normalized_email
+    )
+
+    existing_user = db.scalar(
+        select(User).where(
+            User.email ==
+            normalized_email
+        )
+    )
+
+    if existing_user is not None:
+        return RegistrationEmailCheckResponse(
+            available=False,
+            reason="existing_email",
+        )
+
+    existing_organization = (
+        find_existing_organization_by_domain(
+            db=db,
+            domain=domain,
+        )
+    )
+
+    if existing_organization is not None:
+        return RegistrationEmailCheckResponse(
+            available=False,
+            reason="organization_exists",
+        )
+
+    return RegistrationEmailCheckResponse(
+        available=True,
+        reason="available",
+    )
+
+
+@router.post(
+    "/check-registration-organization",
+    response_model=
+        RegistrationOrganizationCheckResponse,
+)
+def check_registration_organization(
+    payload: RegistrationOrganizationCheckRequest,
+    db: Session = Depends(get_db),
+) -> RegistrationOrganizationCheckResponse:
+    normalized_name = " ".join(
+       payload.organisation_name.split()
+    ).casefold()
+
+    organizations = db.scalars(
+        select(Organization)
+    ).all()
+
+    for organization in organizations:
+        if (
+            organization.name
+            and
+            " ".join(
+               organization.name.split()
+            ).casefold()
+            == normalized_name
+        ):
+            return (
+                RegistrationOrganizationCheckResponse(
+                    available=False,
+                    reason="organization_exists",
+                )
+            )
+
+    return RegistrationOrganizationCheckResponse(
+        available=True,
+        reason="available",
+    )
 
 
 @router.post(
