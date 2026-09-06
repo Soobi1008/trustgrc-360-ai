@@ -791,6 +791,32 @@ def find_existing_organization_by_domain(
     return None
 
 
+def find_existing_organization_by_name(
+    db: Session,
+    organisation_name: str,
+) -> Organization | None:
+    normalized_name = " ".join(
+        organisation_name.split()
+    ).casefold()
+
+    organizations = db.scalars(
+        select(Organization)
+    ).all()
+
+    for organization in organizations:
+        if not organization.name:
+            continue
+
+        existing_name = " ".join(
+            organization.name.split()
+        ).casefold()
+
+        if existing_name == normalized_name:
+            return organization
+
+    return None
+
+
 # =========================================================
 # HUMAN CHALLENGE ENDPOINT
 # =========================================================
@@ -1002,29 +1028,21 @@ def check_registration_organization(
     payload: RegistrationOrganizationCheckRequest,
     db: Session = Depends(get_db),
 ) -> RegistrationOrganizationCheckResponse:
-    normalized_name = " ".join(
-       payload.organisation_name.split()
-    ).casefold()
+    existing_organization = (
+        find_existing_organization_by_name(
+            db=db,
+            organisation_name=
+                payload.organisation_name,
+        )
+    )
 
-    organizations = db.scalars(
-        select(Organization)
-    ).all()
-
-    for organization in organizations:
-        if (
-            organization.name
-            and
-            " ".join(
-               organization.name.split()
-            ).casefold()
-            == normalized_name
-        ):
-            return (
-                RegistrationOrganizationCheckResponse(
-                    available=False,
-                    reason="organization_exists",
-                )
+    if existing_organization is not None:
+        return (
+            RegistrationOrganizationCheckResponse(
+                available=False,
+                reason="organization_exists",
             )
+        )
 
     return RegistrationOrganizationCheckResponse(
         available=True,
@@ -1121,6 +1139,30 @@ def register(
                 "your organisation administrator."
             ),
         )
+
+    existing_organization_by_name = (
+        find_existing_organization_by_name(
+            db=db,
+            organisation_name=
+                payload.organisation_name,
+        )
+    )
+
+    if (
+        existing_organization_by_name
+        is not None
+    ):
+        raise HTTPException(
+            status_code=
+                status.HTTP_409_CONFLICT,
+            detail=(
+                "An organisation with this name "
+                "is already registered. "
+                "Please verify your organisation "
+                "or request access."
+            ),
+        )
+    
 
     # -----------------------------------------------------
     # 4. Human verification

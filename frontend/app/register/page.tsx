@@ -1689,7 +1689,10 @@ export default function RegisterPage() {
                       ? "Checking registration status..."
                       : registrationEmailCheck ===
                           "available"
-                        ? "✓ Business email accepted. Continue with organisation registration."
+                        ? registrationOrganizationCheck ===
+                        "organization_exists"
+                        ? "✓ Business email accepted. Organisation verification is required before continuing."
+                        : "✓ Business email accepted. Continue with organisation registration."
                         : registrationEmailCheck ===
                             "existing_email"
                           ? "An account already exists for this email address. Please sign in or use password recovery."
