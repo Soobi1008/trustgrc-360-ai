@@ -1,4 +1,13 @@
 from app.models.organization import Organization
+
+from app.models.organization_access_request import (
+    OrganizationAccessRequest,
+)
+
+from app.models.organization_access_invitation_token import (
+    OrganizationAccessInvitationToken,
+)
+
 from app.models.ai_system import AISystem
 from app.models.generated_risk import GeneratedRisk
 from app.models.user import User
@@ -41,6 +50,8 @@ from app.models.password_reset_token import (
 
 __all__ = [
     "Organization",
+    "OrganizationAccessRequest",
+    "OrganizationAccessInvitationToken",
     "AISystem",
     "GeneratedRisk",
     "User",

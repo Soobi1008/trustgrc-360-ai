@@ -1,9 +1,11 @@
+from datetime import datetime
 from typing import Literal
 
 from pydantic import (
     BaseModel,
     EmailStr,
     Field,
+    model_validator,
 )
 
 
@@ -99,6 +101,109 @@ class RegistrationOrganizationCheckResponse(BaseModel):
 
 
 # ---------------------------------------------------------
+# ORGANIZATION ACCESS REQUEST
+# ---------------------------------------------------------
+
+
+class OrganizationAccessRequestCreate(BaseModel):
+    first_name: str = Field(
+        min_length=1,
+        max_length=100,
+    )
+
+    last_name: str = Field(
+        min_length=1,
+        max_length=100,
+    )
+
+    email: EmailStr
+
+    challenge_id: str = Field(
+        min_length=10,
+        max_length=100,
+    )
+
+    human_answer: str = Field(
+        min_length=1,
+        max_length=100,
+    )
+
+
+class OrganizationAccessRequestResponse(BaseModel):
+    status: str
+    message: str
+
+
+class OrganizationAccessRequestListItem(BaseModel):
+    id: int
+    email: EmailStr
+    full_name: str
+    status: str
+    created_at: datetime
+
+
+OrganizationAccessAssignableRole = Literal[
+    "compliance_officer",
+    "ai_governance_officer",
+    "auditor",
+    "executive_viewer",
+]
+
+
+class OrganizationAccessRequestReviewRequest(BaseModel):
+    decision: Literal[
+        "approved",
+        "rejected",
+    ]
+
+    approved_role: (
+        OrganizationAccessAssignableRole
+        | None
+    ) = None
+
+    review_notes: str | None = Field(
+        default=None,
+        max_length=2000,
+    )
+
+    @model_validator(
+        mode="after"
+    )
+    def validate_approved_role(
+        self,
+    ) -> "OrganizationAccessRequestReviewRequest":
+        if (
+            self.decision == "approved"
+            and self.approved_role is None
+        ):
+            raise ValueError(
+                "An approved role is required "
+                "when approving an access request."
+            )
+
+        if (
+            self.decision == "rejected"
+            and self.approved_role is not None
+        ):
+            raise ValueError(
+                "An approved role must not be "
+                "provided when rejecting an "
+                "access request."
+            )
+
+        return self
+
+
+class OrganizationAccessRequestReviewResponse(BaseModel):
+    id: int
+    status: Literal[
+        "approved",
+        "rejected",
+    ]
+    message: str
+
+
+# ---------------------------------------------------------
 # EMAIL VERIFICATION
 # ---------------------------------------------------------
 
@@ -151,5 +256,31 @@ class ResetPasswordRequest(BaseModel):
 
 
 class ResetPasswordResponse(BaseModel):
+    status: str
+    message: str
+
+
+class OrganizationAccessOnboardingRequest(
+    BaseModel
+):
+    token: str = Field(
+        min_length=20,
+        max_length=200,
+    )
+
+    new_password: str = Field(
+        min_length=12,
+        max_length=128,
+    )
+
+    confirm_password: str = Field(
+        min_length=12,
+        max_length=128,
+    )
+
+
+class OrganizationAccessOnboardingResponse(
+    BaseModel
+):
     status: str
     message: str

@@ -47,6 +47,11 @@ from app.core.password_reset import (
     get_valid_password_reset_token,
 )
 
+from app.core.organization_access_invitation import (
+    consume_access_invitation_token,
+    get_valid_access_invitation_token,
+)
+
 from app.core.security import (
     create_access_token,
     hash_password,
@@ -67,12 +72,20 @@ from app.models.organization import (
     Organization,
 )
 
+from app.models.organization_access_request import (
+    OrganizationAccessRequest,
+)
+
 from app.models.user import User
 
 from app.schemas.auth import (
     ForgotPasswordRequest,
     ForgotPasswordResponse,
     HumanChallengeResponse,
+    OrganizationAccessRequestCreate,
+    OrganizationAccessRequestResponse,
+    OrganizationAccessOnboardingRequest,
+    OrganizationAccessOnboardingResponse,
     RegistrationEmailCheckRequest,
     RegistrationEmailCheckResponse,
     RegistrationOrganizationCheckRequest,
@@ -1050,6 +1063,149 @@ def check_registration_organization(
     )
 
 
+# =========================================================
+# ORGANIZATION ACCESS REQUEST
+# =========================================================
+
+
+@router.post(
+    "/request-access",
+    response_model=
+        OrganizationAccessRequestResponse,
+    status_code=
+        status.HTTP_201_CREATED,
+)
+def request_organization_access(
+    payload: OrganizationAccessRequestCreate,
+    db: Session = Depends(get_db),
+) -> OrganizationAccessRequestResponse:
+    normalized_email = normalize_email(
+        str(payload.email)
+    )
+
+    domain = validate_business_email(
+        normalized_email
+    )
+
+    # -----------------------------------------------------
+    # 1. Prevent requests for existing user accounts
+    # -----------------------------------------------------
+
+    existing_user = db.scalar(
+        select(User).where(
+            User.email ==
+            normalized_email
+        )
+    )
+
+    if existing_user is not None:
+        raise HTTPException(
+            status_code=
+                status.HTTP_409_CONFLICT,
+            detail=(
+                "An account already exists "
+                "for this email address."
+            ),
+        )
+
+    # -----------------------------------------------------
+    # 2. Resolve organisation from business email domain
+    # -----------------------------------------------------
+
+    organization = (
+        find_existing_organization_by_domain(
+            db=db,
+            domain=domain,
+        )
+    )
+
+    if organization is None:
+        raise HTTPException(
+            status_code=
+                status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "This work email domain cannot "
+                "currently be used to request "
+                "organisation access."
+            ),
+        )
+
+    # -----------------------------------------------------
+    # 3. Prevent duplicate pending access requests
+    # -----------------------------------------------------
+
+    existing_request = db.scalar(
+        select(
+            OrganizationAccessRequest
+        ).where(
+            OrganizationAccessRequest.organization_id
+            == organization.id,
+            OrganizationAccessRequest.email
+            == normalized_email,
+            OrganizationAccessRequest.status
+            == "pending",
+        )
+    )
+
+    if existing_request is not None:
+        raise HTTPException(
+            status_code=
+                status.HTTP_409_CONFLICT,
+            detail=(
+                "An access request is already "
+                "pending for this email address."
+            ),
+        )
+
+    # -----------------------------------------------------
+    # 4. Human verification
+    # -----------------------------------------------------
+
+    verify_and_consume_challenge(
+        db=db,
+        challenge_id=
+            payload.challenge_id,
+        answer=
+            payload.human_answer,
+    )
+
+    # -----------------------------------------------------
+    # 5. Create pending access request
+    # -----------------------------------------------------
+
+    full_name = (
+        f"{payload.first_name.strip()} "
+        f"{payload.last_name.strip()}"
+    ).strip()
+
+    access_request = (
+        OrganizationAccessRequest(
+            organization_id=
+                organization.id,
+            email=
+                normalized_email,
+            full_name=
+                full_name,
+            status=
+                "pending",
+        )
+    )
+
+    db.add(
+        access_request
+    )
+
+    db.commit()
+
+    return OrganizationAccessRequestResponse(
+        status="pending",
+        message=(
+            "Your access request has been "
+            "submitted for review."
+        ),
+    )
+
+
 @router.post(
     "/register",
     response_model=
@@ -1666,6 +1822,197 @@ def reset_password(
             "successfully. You can now sign in "
             "with your new password."
         ),
+    )
+
+
+@router.post(
+    "/organization-access/onboarding",
+    response_model=
+        OrganizationAccessOnboardingResponse,
+)
+def complete_organization_access_onboarding(
+    payload: OrganizationAccessOnboardingRequest,
+    db: Session = Depends(get_db),
+) -> OrganizationAccessOnboardingResponse:
+    if (
+        payload.new_password
+        != payload.confirm_password
+    ):
+        raise HTTPException(
+            status_code=
+                status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "The new passwords do not match."
+            ),
+        )
+
+    token_record = (
+        get_valid_access_invitation_token(
+            db=db,
+            raw_token=payload.token,
+        )
+    )
+
+    if token_record is None:
+        raise HTTPException(
+            status_code=
+                status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "The organisation access invitation "
+                "is invalid, expired, or has already "
+                "been used."
+            ),
+        )
+
+    access_request = db.get(
+        OrganizationAccessRequest,
+        token_record.access_request_id,
+    )
+
+    if (
+        access_request is None
+        or access_request.status
+        != "approved"
+        or access_request.approved_role
+        is None
+    ):
+        raise HTTPException(
+            status_code=
+                status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "The organisation access invitation "
+                "is no longer valid."
+            ),
+        )
+
+    normalized_email = normalize_email(
+        access_request.email
+    )
+
+    existing_user = db.scalar(
+        select(User).where(
+            User.email ==
+            normalized_email
+        )
+    )
+
+    if existing_user is not None:
+        raise HTTPException(
+            status_code=
+                status.HTTP_409_CONFLICT,
+            detail=(
+                "An account already exists "
+                "for this email address."
+            ),
+        )
+
+    organization = db.get(
+        Organization,
+        access_request.organization_id,
+    )
+
+    if organization is None:
+        raise HTTPException(
+            status_code=
+                status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "The organisation access invitation "
+                "is no longer valid."
+            ),
+        )
+
+    full_name = (
+        access_request.full_name.strip()
+    )
+
+    name_parts = full_name.split(
+        maxsplit=1
+    )
+
+    first_name = (
+        name_parts[0]
+        if name_parts
+        else ""
+    )
+
+    last_name = (
+        name_parts[1]
+        if len(name_parts) > 1
+        else ""
+    )
+
+    password_errors = (
+        validate_password_strength(
+            payload.new_password,
+            email=normalized_email,
+            first_name=first_name,
+            last_name=last_name,
+            organisation_name=
+                organization.name,
+        )
+    )
+
+    if password_errors:
+        raise HTTPException(
+            status_code=
+                status.HTTP_400_BAD_REQUEST,
+            detail=" ".join(
+                password_errors
+            ),
+        )
+
+    now = datetime.now(
+        timezone.utc
+    )
+
+    try:
+        user = User(
+            email=
+                normalized_email,
+            email_verified=
+                True,
+            email_verified_at=
+                now,
+            full_name=
+                full_name,
+            password_hash=
+                hash_password(
+                    payload.new_password
+                ),
+            role=
+                access_request.approved_role,
+            organization_id=
+                access_request.organization_id,
+            is_active=
+                True,
+        )
+
+        db.add(
+            user
+        )
+
+        consume_access_invitation_token(
+            token_record
+        )
+
+        db.commit()
+
+        db.refresh(
+            user
+        )
+
+    except Exception:
+        db.rollback()
+        raise
+
+    return (
+        OrganizationAccessOnboardingResponse(
+            status="account_created",
+            message=(
+                "Your account has been created "
+                "successfully. You can now sign in."
+            ),
+        )
     )
 
 

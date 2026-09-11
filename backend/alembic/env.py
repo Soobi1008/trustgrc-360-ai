@@ -34,6 +34,8 @@ from app.models import industry
 from app.models import jurisdiction
 from app.models import obligation_control
 from app.models import organization
+from app.models import organization_access_request
+from app.models import organization_access_invitation_token
 from app.models import organization_data_category
 from app.models import organization_jurisdiction
 from app.models import regulation
