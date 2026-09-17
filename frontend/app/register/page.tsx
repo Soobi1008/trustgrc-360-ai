@@ -243,6 +243,16 @@ export default function RegisterPage() {
     setResendError,
   ] = useState("");
 
+    const [
+      accessRequestComplete,
+      setAccessRequestComplete,
+    ] = useState(false);
+
+  const [
+    accessRequestMessage,
+    setAccessRequestMessage,
+  ] = useState("");
+
 
   // =========================================================
   // EMAIL VALIDATION
@@ -1028,6 +1038,203 @@ export default function RegisterPage() {
     }
   }
 
+  
+  // =========================================================
+  // EXISTING ORGANISATION ACCESS REQUEST
+  // =========================================================
+
+  async function handleRequestAccess() {
+    setErrorMessage("");
+    setAccessRequestMessage("");
+
+
+    if (
+      !firstName.trim() ||
+      !lastName.trim() ||
+      !email.trim()
+    ) {
+      setErrorMessage(
+        "Please complete your first name, last name, and work email."
+      );
+      return;
+    }
+
+
+    if (
+      registrationEmailCheck !==
+      "organization_exists"
+    ) {
+      setErrorMessage(
+        "We could not confirm that your work email belongs to an existing organisation."
+      );
+      return;
+    }
+
+
+    if (!challenge) {
+      setErrorMessage(
+        "Human verification is not available. Please request a new challenge."
+      );
+      return;
+    }
+
+
+    if (!humanAnswer.trim()) {
+      setErrorMessage(
+        "Please complete the human verification challenge."
+      );
+      return;
+    }
+
+
+    if (!API_URL) {
+      setErrorMessage(
+        "NEXT_PUBLIC_API_URL is not configured."
+      );
+
+      await resetAfterFailure();
+      return;
+    }
+
+
+    try {
+      setIsSubmitting(true);
+
+      const normalizedEmail =
+        email
+          .trim()
+          .toLowerCase();
+
+
+      const response =
+        await fetch(
+          `${API_URL}/api/v1/auth/request-access`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+              Accept:
+                "application/json",
+            },
+            body: JSON.stringify({
+              first_name:
+                firstName.trim(),
+
+              last_name:
+                lastName.trim(),
+
+              email:
+                normalizedEmail,
+
+              challenge_id:
+                challenge.challenge_id,
+
+              human_answer:
+                humanAnswer.trim(),
+            }),
+          }
+        );
+
+
+      let data: {
+        status?: string;
+        message?: string;
+        detail?: string;
+      } = {};
+
+
+      try {
+        data =
+          (await response.json()) as {
+            status?: string;
+            message?: string;
+            detail?: string;
+          };
+      } catch {
+        data = {};
+      }
+
+
+      if (!response.ok) {
+        const detail =
+          data.detail ||
+          "Unable to submit the access request.";
+
+        const normalizedDetail =
+          detail.toLowerCase();
+
+
+        if (
+          normalizedDetail.includes(
+            "already pending"
+          )
+        ) {
+          throw new Error(
+            "An access request is already pending for this email address."
+          );
+        }
+
+
+        if (
+          normalizedDetail.includes(
+            "account already exists"
+          )
+        ) {
+          throw new Error(
+            "An account already exists for this email address. Please sign in instead."
+          );
+        }
+
+
+        throw new Error(
+          detail
+        );
+      }
+
+
+      setAccessRequestMessage(
+        data.message ||
+          "Your access request has been submitted for review."
+      );
+
+      setAccessRequestComplete(
+        true
+      );
+
+      setHumanAnswer("");
+      setChallenge(null);
+
+    } catch (error) {
+      let message =
+        "Unable to submit the access request.";
+
+
+      if (
+        error instanceof TypeError
+      ) {
+        message =
+          "The TrustGRC access request service is temporarily unavailable. Please try again.";
+      } else if (
+        error instanceof Error
+      ) {
+        message =
+          error.message;
+      }
+
+
+      setErrorMessage(
+        message
+      );
+
+
+      await resetAfterFailure();
+
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
 
   // =========================================================
   // RESEND VERIFICATION
@@ -1741,6 +1948,431 @@ export default function RegisterPage() {
                 organisation.
               </div>
             )}
+
+
+            {registrationPath ===
+              "existing_organization" && (
+              <div
+                style={{
+                  marginTop: "18px",
+                }}
+              >
+                {accessRequestComplete ? (
+                  <div
+                    style={{
+                      padding: "18px",
+                      border:
+                        "1px solid #bbf7d0",
+                      borderRadius: "11px",
+                      backgroundColor:
+                        "#f0fdf4",
+                    }}
+                  >
+                    <div
+                      style={{
+                        color: "#166534",
+                        fontSize: "16px",
+                        fontWeight: 800,
+                        marginBottom: "8px",
+                      }}
+                    >
+                      Access request submitted
+                    </div>
+
+                    <p
+                      style={{
+                        margin: 0,
+                        color: "#166534",
+                        fontSize: "13px",
+                        lineHeight: 1.65,
+                      }}
+                    >
+                      {accessRequestMessage ||
+                        "Your access request has been submitted for review."}
+                    </p>
+
+                    <p
+                      style={{
+                        margin:
+                          "10px 0 0",
+                        color: "#475569",
+                        fontSize: "12px",
+                        lineHeight: 1.6,
+                      }}
+                    >
+                      Your organisation administrator
+                      must review and approve your
+                      request before you can activate
+                      your account.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div
+                      style={{
+                        padding:
+                          "14px 16px",
+                        border:
+                          "1px solid #93c5fd",
+                        borderRadius:
+                          "10px",
+                        backgroundColor:
+                          "#eff6ff",
+                        color:
+                          "#1e3a8a",
+                        fontSize:
+                          "13px",
+                        lineHeight:
+                          1.65,
+                      }}
+                    >
+                      <strong>
+                        Existing organisation detected.
+                      </strong>{" "}
+                      Your work email domain is
+                      associated with an organisation
+                      that is already registered with
+                      TrustGRC AI 360. Complete the
+                      human verification below and
+                      submit an access request to your
+                      organisation administrator.
+                    </div>
+
+                    <div
+                      style={{
+                        marginTop:
+                          "18px",
+                        padding:
+                          "16px",
+                        border:
+                          "1px solid #c7d2fe",
+                        borderRadius:
+                          "11px",
+                        backgroundColor:
+                          "#f8faff",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent:
+                            "space-between",
+                          alignItems:
+                            "flex-start",
+                          gap: "14px",
+                        }}
+                      >
+                        <div>
+                          <div
+                            style={{
+                              fontSize:
+                                "12px",
+                              fontWeight:
+                                800,
+                              color:
+                                "#4338ca",
+                              textTransform:
+                                "uppercase",
+                              letterSpacing:
+                                "0.05em",
+                            }}
+                          >
+                            Human Verification
+                          </div>
+
+                          <p
+                            style={{
+                              margin:
+                                "7px 0 0",
+                              color:
+                                "#334155",
+                              fontSize:
+                                "13px",
+                              lineHeight:
+                                1.6,
+                              fontWeight:
+                                600,
+                            }}
+                          >
+                            {challengeLoading
+                              ? "Loading verification challenge..."
+                              : challenge
+                                  ?.question ??
+                                "Verification challenge unavailable."}
+                          </p>
+
+                          {challenge && (
+                            <div
+                              style={{
+                                marginTop:
+                                  "6px",
+                                color:
+                                  "#64748b",
+                                fontSize:
+                                  "10px",
+                              }}
+                            >
+                              Challenge type:{" "}
+                              {formatChallengeType(
+                                challenge.challenge_type
+                              )}
+                              {" • "}
+                              expires in{" "}
+                              {Math.round(
+                                challenge.expires_in_seconds /
+                                  60
+                              )}{" "}
+                              minutes
+                            </div>
+                          )}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void loadHumanChallenge()
+                          }
+                          disabled={
+                            challengeLoading ||
+                            isSubmitting
+                          }
+                          style={{
+                            border:
+                              "1px solid #cbd5e1",
+                            borderRadius:
+                              "8px",
+                            padding:
+                              "7px 10px",
+                            backgroundColor:
+                              "#ffffff",
+                            color:
+                              "#475569",
+                            fontSize:
+                              "11px",
+                            fontWeight:
+                              700,
+                            cursor:
+                              challengeLoading ||
+                              isSubmitting
+                                ? "not-allowed"
+                                : "pointer",
+                            opacity:
+                              challengeLoading ||
+                              isSubmitting
+                                ? 0.6
+                                : 1,
+                            whiteSpace:
+                              "nowrap",
+                          }}
+                        >
+                          {challengeLoading
+                            ? "Loading..."
+                            : "New challenge"}
+                        </button>
+                      </div>
+
+                      {challengeError && (
+                        <div
+                          style={{
+                            marginTop:
+                              "12px",
+                            padding:
+                              "10px 12px",
+                            borderRadius:
+                              "8px",
+                            border:
+                              "1px solid #fecaca",
+                            backgroundColor:
+                              "#fef2f2",
+                            color:
+                              "#991b1b",
+                            fontSize:
+                              "12px",
+                            lineHeight:
+                              1.5,
+                          }}
+                        >
+                          {challengeError}
+                        </div>
+                      )}
+
+                      {challengeUsesOptions &&
+                        challenge && (
+                          <div
+                            style={{
+                              marginTop:
+                                "14px",
+                              display:
+                                "grid",
+                              gridTemplateColumns:
+                                "repeat(2, minmax(0, 1fr))",
+                              gap:
+                                "9px",
+                            }}
+                          >
+                            {challenge.options.map(
+                              (option) => {
+                                const selected =
+                                  humanAnswer ===
+                                  option;
+
+                                return (
+                                  <button
+                                    key={option}
+                                    type="button"
+                                    onClick={() =>
+                                      setHumanAnswer(
+                                        option
+                                      )
+                                    }
+                                    disabled={
+                                      isSubmitting
+                                    }
+                                    style={{
+                                      padding:
+                                        "11px 12px",
+                                      borderRadius:
+                                        "9px",
+                                      border:
+                                        selected
+                                          ? "1px solid #4f46e5"
+                                          : "1px solid #cbd5e1",
+                                      backgroundColor:
+                                        selected
+                                          ? "#eef2ff"
+                                          : "#ffffff",
+                                      color:
+                                        selected
+                                          ? "#3730a3"
+                                          : "#334155",
+                                      fontSize:
+                                        challenge.challenge_type ===
+                                        "shape_pattern"
+                                          ? "22px"
+                                          : "12px",
+                                      fontWeight:
+                                        700,
+                                      cursor:
+                                        isSubmitting
+                                          ? "not-allowed"
+                                          : "pointer",
+                                      opacity:
+                                        isSubmitting
+                                          ? 0.6
+                                          : 1,
+                                    }}
+                                  >
+                                    {selected
+                                      ? "✓ "
+                                      : ""}
+
+                                    {option}
+                                  </button>
+                                );
+                              }
+                            )}
+                          </div>
+                        )}
+
+                      {!challengeUsesOptions &&
+                        challenge && (
+                          <input
+                            type="text"
+                            autoComplete="off"
+                            value={
+                              humanAnswer
+                            }
+                            onChange={(
+                              event
+                            ) =>
+                              setHumanAnswer(
+                                event.target.value
+                              )
+                            }
+                            disabled={
+                              isSubmitting
+                            }
+                            placeholder="Enter your answer"
+                            style={{
+                              ...inputStyle,
+                              marginTop:
+                                "13px",
+                            }}
+                          />
+                        )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void handleRequestAccess()
+                      }
+                      disabled={
+                        isSubmitting ||
+                        challengeLoading ||
+                        challenge === null ||
+                        !humanAnswer.trim()
+                      }
+                      style={{
+                        width: "100%",
+                        marginTop:
+                          "18px",
+                        padding:
+                          "12px 18px",
+                        border: "none",
+                        borderRadius:
+                          "9px",
+                        backgroundColor:
+                          isSubmitting ||
+                          challengeLoading ||
+                          challenge === null ||
+                          !humanAnswer.trim()
+                            ? "#94a3b8"
+                            : "#2563eb",
+                        color:
+                          "#ffffff",
+                        cursor:
+                          isSubmitting ||
+                          challengeLoading ||
+                          challenge === null ||
+                          !humanAnswer.trim()
+                            ? "not-allowed"
+                            : "pointer",
+                        fontSize:
+                          "15px",
+                        fontWeight:
+                          700,
+                      }}
+                    >
+                      {isSubmitting
+                        ? "Submitting access request..."
+                        : "Request access"}
+                    </button>
+
+                    <p
+                      style={{
+                        margin:
+                          "10px 0 0",
+                        color:
+                          "#64748b",
+                        fontSize:
+                          "11px",
+                        lineHeight:
+                          1.55,
+                        textAlign:
+                          "center",
+                      }}
+                    >
+                      No account will be created
+                      until your organisation
+                      administrator approves your
+                      request.
+                    </p>
+                  </>
+                )}
+              </div>
+            )}
+
 
             {registrationPath ===
               "new_organization" && (

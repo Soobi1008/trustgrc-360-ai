@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 import LogoutButton from "../components/LogoutButton";
 import {
@@ -16,13 +17,10 @@ export default function CompanyLayout({
   children: React.ReactNode;
 }>) {
   const router = useRouter();
+  const pathname = usePathname();
 
-  const [
-    user,
-    setUser,
-  ] = useState<AuthUser | null>(
-    null
-  );
+  const [user, setUser] =
+    useState<AuthUser | null>(null);
 
   const [
     isCheckingAccess,
@@ -75,6 +73,29 @@ export default function CompanyLayout({
     );
   }
 
+  const isOrganisationAdmin =
+    user.role ===
+    "organization_admin";
+
+  const linkStyle = (
+    active: boolean
+  ): React.CSSProperties => ({
+    display: "inline-flex",
+    alignItems: "center",
+    minHeight: "40px",
+    padding: "0 14px",
+    borderRadius: "8px",
+    textDecoration: "none",
+    fontSize: "14px",
+    fontWeight: 600,
+    color: active
+      ? "#ffffff"
+      : "#334155",
+    backgroundColor: active
+      ? "#0f172a"
+      : "transparent",
+  });
+
   return (
     <div
       style={{
@@ -93,30 +114,22 @@ export default function CompanyLayout({
       >
         <div
           style={{
-            maxWidth:
-              "1100px",
-            margin:
-              "0 auto",
-            display:
-              "flex",
-            alignItems:
-              "center",
+            maxWidth: "1100px",
+            margin: "0 auto",
+            display: "flex",
+            alignItems: "center",
             justifyContent:
               "space-between",
-            gap:
-              "24px",
+            gap: "24px",
           }}
         >
           <div>
             <p
               style={{
                 margin: 0,
-                color:
-                  "#0f172a",
-                fontSize:
-                  "14px",
-                fontWeight:
-                  700,
+                color: "#0f172a",
+                fontSize: "14px",
+                fontWeight: 700,
               }}
             >
               {user.full_name}
@@ -124,12 +137,9 @@ export default function CompanyLayout({
 
             <p
               style={{
-                margin:
-                  "4px 0 0",
-                color:
-                  "#64748b",
-                fontSize:
-                  "12px",
+                margin: "4px 0 0",
+                color: "#64748b",
+                fontSize: "12px",
               }}
             >
               {user.email}
@@ -138,11 +148,40 @@ export default function CompanyLayout({
 
           <div
             style={{
-              width:
-                "120px",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
             }}
           >
-            <LogoutButton />
+            <Link
+              href="/company/dashboard"
+              style={linkStyle(
+                pathname ===
+                  "/company/dashboard"
+              )}
+            >
+              Dashboard
+            </Link>
+
+            {isOrganisationAdmin && (
+              <Link
+                href="/company/organization-access"
+                style={linkStyle(
+                  pathname ===
+                    "/company/organization-access"
+                )}
+              >
+                Access Requests
+              </Link>
+            )}
+
+            <div
+              style={{
+                width: "120px",
+              }}
+            >
+              <LogoutButton />
+            </div>
           </div>
         </div>
       </header>
