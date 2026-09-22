@@ -48,6 +48,34 @@ type ReviewResponse = {
 };
 
 
+type InvitationStatus =
+  | "pending_acceptance"
+  | "expired"
+  | "account_activated"
+  | "delivery_unavailable";
+
+
+type ApprovedInvitation = {
+  id: number;
+  email: string;
+  full_name: string;
+  approved_role: AssignableRole;
+  reviewed_at: string | null;
+  invitation_status: InvitationStatus;
+  invitation_expires_at: string | null;
+};
+
+
+type DomainRequest = {
+  id: number;
+  domain: string;
+  requester_email: string;
+  requester_name: string;
+  status: string;
+  created_at: string;
+};
+
+
 type ApiError = {
   detail?: string | {
     msg?: string;
@@ -144,6 +172,27 @@ export default function OrganizationAccessPage() {
   ] = useState<AccessRequest[]>([]);
 
   const [
+    approvedInvitations,
+    setApprovedInvitations,
+  ] = useState<
+    ApprovedInvitation[]
+  >([]);
+
+  const [
+    domainRequests,
+    setDomainRequests,
+  ] = useState<
+    DomainRequest[]
+  >([]);
+
+  const [
+    domainReviewNotes,
+    setDomainReviewNotes,
+  ] = useState<
+    Record<number, string>
+  >({});
+
+  const [
     reviewForms,
     setReviewForms,
   ] = useState<
@@ -158,6 +207,11 @@ export default function OrganizationAccessPage() {
   const [
     processingRequestId,
     setProcessingRequestId,
+  ] = useState<number | null>(null);
+
+  const [
+    processingDomainRequestId,
+    setProcessingDomainRequestId,
   ] = useState<number | null>(null);
 
   const [
@@ -279,9 +333,161 @@ export default function OrganizationAccessPage() {
     }, [router]);
 
 
-  useEffect(() => {
-    void loadRequests();
-  }, [loadRequests]);
+  const loadApprovedInvitations =
+    useCallback(async () => {
+      const token = getAccessToken();
+
+      if (!token) {
+        clearAuthentication();
+        router.replace("/login");
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `${API_URL}/api/v1/organization-access-requests/approved`,
+          {
+            method: "GET",
+            headers: {
+              Accept:
+                "application/json",
+              Authorization:
+                `Bearer ${token}`,
+            },
+            cache: "no-store",
+          }
+        );
+
+        if (response.status === 401) {
+          clearAuthentication();
+          router.replace("/login");
+          return;
+        }
+
+        if (response.status === 403) {
+          setApprovedInvitations(
+            []
+          );
+          return;
+        }
+
+        let data:
+          | ApprovedInvitation[]
+          | ApiError
+          | null = null;
+
+        try {
+          data =
+            await response.json();
+        } catch {
+          data = null;
+        }
+
+        if (!response.ok) {
+          throw new Error(
+            getApiErrorMessage(
+              data as ApiError,
+              "Unable to load approved invitations."
+            )
+          );
+        }
+
+        setApprovedInvitations(
+          Array.isArray(data)
+            ? data
+            : []
+        );
+      } catch (error) {
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Unable to load approved invitations."
+        );
+      }
+    }, [router]);
+
+
+      const loadDomainRequests =
+    useCallback(async () => {
+      const token = getAccessToken();
+
+      if (!token) {
+        clearAuthentication();
+        router.replace("/login");
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `${API_URL}/api/v1/organization-domain-requests`,
+          {
+            method: "GET",
+            headers: {
+              Accept:
+                "application/json",
+              Authorization:
+                `Bearer ${token}`,
+            },
+            cache: "no-store",
+          }
+        );
+
+        if (response.status === 401) {
+          clearAuthentication();
+          router.replace("/login");
+          return;
+        }
+
+        if (response.status === 403) {
+          setDomainRequests([]);
+          return;
+        }
+
+        let data:
+          | DomainRequest[]
+          | ApiError
+          | null = null;
+
+        try {
+          data =
+            await response.json();
+        } catch {
+          data = null;
+        }
+
+        if (!response.ok) {
+          throw new Error(
+            getApiErrorMessage(
+              data as ApiError,
+              "Unable to load domain association requests."
+            )
+          );
+        }
+
+        setDomainRequests(
+          Array.isArray(data)
+            ? data
+            : []
+        );
+      } catch (error) {
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Unable to load domain association requests."
+        );
+      }
+    }, [router]);
+
+
+    useEffect(() => {
+      void loadRequests();
+      void loadApprovedInvitations();
+      void loadDomainRequests();
+    }, [
+      loadRequests,
+      loadApprovedInvitations,
+      loadDomainRequests,
+    ]);
 
 
   function updateReviewForm(
@@ -440,11 +646,215 @@ export default function OrganizationAccessPage() {
           return next;
         }
       );
+
+      if (decision === "approved") {
+        await loadApprovedInvitations();
+      }
     } catch (error) {
       setErrorMessage(
         error instanceof Error
           ? error.message
           : "Unable to review the access request."
+      );
+    } finally {
+      setProcessingRequestId(
+        null
+      );
+    }
+  }
+
+
+  async function reviewDomainRequest(
+    requestId: number,
+    decision:
+      | "approved"
+      | "rejected"
+  ) {
+    const token =
+      getAccessToken();
+
+    if (!token) {
+      clearAuthentication();
+      router.replace("/login");
+      return;
+    }
+
+    setProcessingDomainRequestId(
+      requestId
+    );
+
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    try {
+      const response = await fetch(
+        `${API_URL}/api/v1/organization-domain-requests/${requestId}/review`,
+        {
+          method: "POST",
+          headers: {
+            Accept:
+              "application/json",
+            "Content-Type":
+              "application/json",
+            Authorization:
+              `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            decision,
+            review_notes:
+              domainReviewNotes[
+                requestId
+              ]?.trim() ||
+              null,
+          }),
+        }
+      );
+
+      if (response.status === 401) {
+        clearAuthentication();
+        router.replace("/login");
+        return;
+      }
+
+      let data:
+        | ReviewResponse
+        | ApiError
+        | null = null;
+
+      try {
+        data =
+          await response.json();
+      } catch {
+        data = null;
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          getApiErrorMessage(
+            data as ApiError,
+            decision === "approved"
+              ? "Unable to approve the domain association request."
+              : "Unable to reject the domain association request."
+          )
+        );
+      }
+
+      const reviewResponse =
+        data as ReviewResponse;
+
+      setSuccessMessage(
+        reviewResponse.message
+      );
+
+      setDomainRequests(
+        (previous) =>
+          previous.filter(
+            (request) =>
+              request.id !==
+              requestId
+          )
+      );
+
+      setDomainReviewNotes(
+        (previous) => {
+          const next = {
+            ...previous,
+          };
+
+          delete next[
+            requestId
+          ];
+
+          return next;
+        }
+      );
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to review the domain association request."
+      );
+    } finally {
+      setProcessingDomainRequestId(
+        null
+      );
+    }
+  }
+
+
+  async function resendInvitation(
+    requestId: number
+  ) {
+    const token =
+      getAccessToken();
+
+    if (!token) {
+      clearAuthentication();
+      router.replace("/login");
+      return;
+    }
+
+    setProcessingRequestId(
+      requestId
+    );
+
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    try {
+      const response = await fetch(
+        `${API_URL}/api/v1/organization-access-requests/${requestId}/resend-invitation`,
+        {
+          method: "POST",
+          headers: {
+            Accept:
+              "application/json",
+            Authorization:
+              `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.status === 401) {
+        clearAuthentication();
+        router.replace("/login");
+        return;
+      }
+
+      let data:
+        | ReviewResponse
+        | ApiError
+        | null = null;
+
+      try {
+        data =
+          await response.json();
+      } catch {
+        data = null;
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          getApiErrorMessage(
+            data as ApiError,
+            "Unable to resend the invitation."
+          )
+        );
+      }
+
+      const result =
+        data as ReviewResponse;
+
+      setSuccessMessage(
+        result.message
+      );
+
+      await loadApprovedInvitations();
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to resend the invitation."
       );
     } finally {
       setProcessingRequestId(
@@ -524,12 +934,16 @@ export default function OrganizationAccessPage() {
 
         <button
           type="button"
-          onClick={() =>
+          onClick={() => {
             void loadRequests()
-          }
+	          void loadApprovedInvitations();
+            void loadDomainRequests();
+          }}
           disabled={
             isLoading ||
             processingRequestId !==
+              null ||
+            processingDomainRequestId !==
               null
           }
           style={{
@@ -541,7 +955,9 @@ export default function OrganizationAccessPage() {
             background: "#ffffff",
             color: "#0f172a",
             cursor:
-              isLoading
+              isLoading ||
+              processingRequestId !== null ||
+              processingDomainRequestId !== null
                 ? "not-allowed"
                 : "pointer",
             fontWeight: 600,
@@ -1083,6 +1499,593 @@ export default function OrganizationAccessPage() {
           )}
         </div>
       )}
+
+
+      <section
+        style={{
+          marginTop: "36px",
+        }}
+      >
+        <div
+          style={{
+            marginBottom: "18px",
+          }}
+        >
+          <h2
+            style={{
+              margin: "0 0 8px",
+              fontSize: "24px",
+              color: "#0f172a",
+            }}
+          >
+            Approved invitations
+          </h2>
+
+          <p
+            style={{
+              margin: 0,
+              color: "#64748b",
+              lineHeight: 1.6,
+            }}
+          >
+            Track approved users and
+            the status of their secure
+            onboarding invitations.
+          </p>
+        </div>
+
+
+        {approvedInvitations.length ===
+        0 ? (
+          <div
+            style={{
+              padding: "32px 24px",
+              border:
+                "1px solid #e2e8f0",
+              borderRadius: "12px",
+              background: "#ffffff",
+              color: "#64748b",
+              textAlign: "center",
+            }}
+          >
+            No approved invitations
+            found.
+          </div>
+        ) : (
+          <div
+            style={{
+              display: "grid",
+              gap: "16px",
+            }}
+          >
+            {approvedInvitations.map(
+              (invitation) => {
+                const roleLabel =
+                  roleOptions.find(
+                    (role) =>
+                      role.value ===
+                      invitation.approved_role
+                  )?.label ??
+                  invitation.approved_role;
+
+                const statusLabel =
+                  invitation.invitation_status ===
+                  "pending_acceptance"
+                    ? "Pending acceptance"
+                    : invitation.invitation_status ===
+                      "account_activated"
+                    ? "Account activated"
+                    : invitation.invitation_status ===
+                      "expired"
+                    ? "Expired"
+                    : "Invitation unavailable";
+
+                return (
+                  <article
+                    key={invitation.id}
+                    style={{
+                      padding: "20px 24px",
+                      border:
+                        "1px solid #e2e8f0",
+                      borderRadius:
+                        "12px",
+                      background:
+                        "#ffffff",
+                      boxShadow:
+                        "0 1px 2px rgba(15, 23, 42, 0.04)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent:
+                          "space-between",
+                        alignItems:
+                          "flex-start",
+                        gap: "20px",
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <div>
+                        <h3
+                          style={{
+                            margin:
+                              "0 0 6px",
+                            fontSize:
+                              "18px",
+                            color:
+                              "#0f172a",
+                          }}
+                        >
+                          {
+                            invitation.full_name
+                          }
+                        </h3>
+
+                        <p
+                          style={{
+                            margin:
+                              "0 0 6px",
+                            color:
+                              "#334155",
+                          }}
+                        >
+                          {
+                            invitation.email
+                          }
+                        </p>
+
+                        <p
+                          style={{
+                            margin: 0,
+                            fontSize:
+                              "13px",
+                            color:
+                              "#64748b",
+                          }}
+                        >
+                          Role:{" "}
+                          {roleLabel}
+                        </p>
+                      </div>
+
+                      <span
+                        style={{
+                          display:
+                            "inline-flex",
+                          alignItems:
+                            "center",
+                          padding:
+                            "6px 10px",
+                          borderRadius:
+                            "999px",
+                          background:
+                            "#f1f5f9",
+                          color:
+                            "#334155",
+                          fontSize:
+                            "12px",
+                          fontWeight: 700,
+                        }}
+                      >
+                        {statusLabel}
+                      </span>
+                    </div>
+
+
+                    <div
+                      style={{
+                        marginTop:
+                          "16px",
+                        paddingTop:
+                          "14px",
+                        borderTop:
+                          "1px solid #e2e8f0",
+                        fontSize:
+                          "13px",
+                        color:
+                          "#64748b",
+                        lineHeight: 1.7,
+                      }}
+                    >
+                      <div>
+                        Approved:{" "}
+                        {invitation.reviewed_at
+                          ? formatRequestDate(
+                              invitation.reviewed_at
+                            )
+                          : "Legacy approval — date unavailable"}
+                      </div>
+
+                      {invitation
+                        .invitation_expires_at &&
+                        invitation
+                          .invitation_status !==
+                          "account_activated" && (
+                          <div>
+                            Invitation
+                            expires:{" "}
+                            {formatRequestDate(
+                              invitation.invitation_expires_at
+                            )}
+                          </div>
+                        )}
+                    </div>
+
+                    
+                    {(invitation.invitation_status ===
+                      "expired" ||
+                      invitation.invitation_status ===
+                        "delivery_unavailable") && (
+                      <div
+                        style={{
+                          marginTop: "16px",
+                          paddingTop: "16px",
+                          borderTop:
+                            "1px solid #e2e8f0",
+                        }}
+                      >
+                        <button
+                          type="button"
+                          disabled={
+                            processingRequestId ===
+                            invitation.id
+                          }
+                          onClick={() =>
+                            void resendInvitation(
+                              invitation.id
+                            )
+                          }
+                          style={{
+                            border: 0,
+                            borderRadius:
+                              "8px",
+                            padding:
+                              "10px 15px",
+                            background:
+                              "#0f172a",
+                            color:
+                              "#ffffff",
+                            fontWeight: 700,
+                            cursor:
+                              processingRequestId ===
+                              invitation.id
+                                ? "not-allowed"
+                                : "pointer",
+                            opacity:
+                              processingRequestId ===
+                              invitation.id
+                                ? 0.7
+                                : 1,
+                          }}
+                        >
+                          {processingRequestId ===
+                          invitation.id
+                            ? "Sending..."
+                            : invitation.invitation_status ===
+                              "expired"
+                            ? "Resend invitation"
+                            : "Send invitation"}
+                        </button>
+                      </div>
+                    )}
+                  </article>
+                );
+              }
+            )}
+          </div>
+        )}
+      </section>
+            <section
+        style={{
+          marginTop: "36px",
+        }}
+      >
+        <div
+          style={{
+            marginBottom: "18px",
+          }}
+        >
+          <h2
+            style={{
+              margin: "0 0 8px",
+              fontSize: "24px",
+              color: "#0f172a",
+            }}
+          >
+            Domain association requests
+          </h2>
+
+          <p
+            style={{
+              margin: 0,
+              color: "#64748b",
+              lineHeight: 1.6,
+            }}
+          >
+            Review requests to associate
+            new business domains with your
+            organisation.
+          </p>
+        </div>
+
+        {domainRequests.length === 0 ? (
+          <div
+            style={{
+              padding: "32px 24px",
+              border:
+                "1px solid #e2e8f0",
+              borderRadius: "12px",
+              background: "#ffffff",
+              color: "#64748b",
+              textAlign: "center",
+            }}
+          >
+            No pending domain association
+            requests.
+          </div>
+        ) : (
+          <div
+            style={{
+              display: "grid",
+              gap: "16px",
+            }}
+          >
+            {domainRequests.map(
+              (domainRequest) => (
+                <article
+                  key={domainRequest.id}
+                  style={{
+                    padding: "20px 24px",
+                    border:
+                      "1px solid #e2e8f0",
+                    borderRadius: "12px",
+                    background: "#ffffff",
+                    boxShadow:
+                      "0 1px 2px rgba(15, 23, 42, 0.04)",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent:
+                        "space-between",
+                      alignItems:
+                        "flex-start",
+                      gap: "20px",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <div>
+                      <h3
+                        style={{
+                          margin:
+                            "0 0 6px",
+                          fontSize: "18px",
+                          color: "#0f172a",
+                        }}
+                      >
+                        {domainRequest.domain}
+                      </h3>
+
+                      <p
+                        style={{
+                          margin:
+                            "0 0 5px",
+                          color: "#334155",
+                        }}
+                      >
+                        {
+                          domainRequest.requester_name
+                        }
+                      </p>
+
+                      <p
+                        style={{
+                          margin:
+                            "0 0 5px",
+                          color: "#334155",
+                        }}
+                      >
+                        {
+                          domainRequest.requester_email
+                        }
+                      </p>
+
+                      <p
+                        style={{
+                          margin: 0,
+                          fontSize: "13px",
+                          color: "#64748b",
+                        }}
+                      >
+                        Requested{" "}
+                        {formatRequestDate(
+                          domainRequest.created_at
+                        )}
+                      </p>
+                    </div>
+
+                    <span
+                      style={{
+                        display:
+                          "inline-flex",
+                        alignItems: "center",
+                        borderRadius:
+                          "999px",
+                        padding: "6px 10px",
+                        background:
+                          "#fff7ed",
+                        color: "#9a3412",
+                        fontSize: "12px",
+                        fontWeight: 700,
+                        textTransform:
+                          "capitalize",
+                      }}
+                    >
+                      {domainRequest.status}
+                    </span>
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: "20px",
+                    }}
+                  >
+                    <label
+                      htmlFor={`domain-notes-${domainRequest.id}`}
+                      style={{
+                        display: "block",
+                        marginBottom: "8px",
+                        fontWeight: 700,
+                        color: "#0f172a",
+                      }}
+                    >
+                      Review notes
+                    </label>
+
+                    <textarea
+                      id={`domain-notes-${domainRequest.id}`}
+                      value={
+                        domainReviewNotes[
+                          domainRequest.id
+                        ] ?? ""
+                      }
+                      disabled={
+                        processingDomainRequestId ===
+                        domainRequest.id
+                      }
+                      maxLength={2000}
+                      rows={3}
+                      placeholder="Optional internal review notes..."
+                      onChange={(event) =>
+                        setDomainReviewNotes(
+                          (previous) => ({
+                            ...previous,
+                            [domainRequest.id]:
+                              event.target.value,
+                          })
+                        )
+                      }
+                      style={{
+                        width: "100%",
+                        padding: "11px 12px",
+                        border:
+                          "1px solid #cbd5e1",
+                        borderRadius: "8px",
+                        resize: "vertical",
+                        fontFamily: "inherit",
+                        color: "#0f172a",
+                      }}
+                    />
+
+                    <div
+                      style={{
+                        marginTop: "5px",
+                        fontSize: "12px",
+                        color: "#64748b",
+                      }}
+                    >
+                      {
+                        (
+                          domainReviewNotes[
+                            domainRequest.id
+                          ] ?? ""
+                        ).length
+                      }
+                      /2000
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: "12px",
+                      marginTop: "20px",
+                      paddingTop: "20px",
+                      borderTop:
+                        "1px solid #e2e8f0",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      disabled={
+                        processingDomainRequestId ===
+                        domainRequest.id
+                      }
+                      onClick={() =>
+                        void reviewDomainRequest(
+                          domainRequest.id,
+                          "approved"
+                        )
+                      }
+                      style={{
+                        border: 0,
+                        borderRadius: "8px",
+                        padding: "11px 16px",
+                        background: "#166534",
+                        color: "#ffffff",
+                        fontWeight: 700,
+                        cursor:
+                          processingDomainRequestId ===
+                          domainRequest.id
+                            ? "not-allowed"
+                            : "pointer",
+                        opacity:
+                          processingDomainRequestId ===
+                          domainRequest.id
+                            ? 0.7
+                            : 1,
+                      }}
+                    >
+                      {processingDomainRequestId ===
+                      domainRequest.id
+                        ? "Processing..."
+                        : "Approve domain"}
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={
+                        processingDomainRequestId ===
+                        domainRequest.id
+                      }
+                      onClick={() =>
+                        void reviewDomainRequest(
+                          domainRequest.id,
+                          "rejected"
+                        )
+                      }
+                      style={{
+                        border:
+                          "1px solid #fecaca",
+                        borderRadius: "8px",
+                        padding: "11px 16px",
+                        background: "#ffffff",
+                        color: "#b91c1c",
+                        fontWeight: 700,
+                        cursor:
+                          processingDomainRequestId ===
+                          domainRequest.id
+                            ? "not-allowed"
+                            : "pointer",
+                        opacity:
+                          processingDomainRequestId ===
+                          domainRequest.id
+                            ? 0.7
+                            : 1,
+                      }}
+                    >
+                      Reject request
+                    </button>
+                  </div>
+                </article>
+              )
+            )}
+          </div>
+        )}
+      </section>
     </main>
   );
 }

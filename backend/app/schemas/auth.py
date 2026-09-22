@@ -101,6 +101,75 @@ class RegistrationOrganizationCheckResponse(BaseModel):
 
 
 # ---------------------------------------------------------
+# ORGANIZATION DOMAIN REQUEST
+# ---------------------------------------------------------
+
+
+class OrganizationDomainRequestCreate(BaseModel):
+    organisation_name: str = Field(
+        min_length=2,
+        max_length=200,
+    )
+
+    first_name: str = Field(
+        min_length=1,
+        max_length=100,
+    )
+
+    last_name: str = Field(
+        min_length=1,
+        max_length=100,
+    )
+
+    email: EmailStr
+
+    challenge_id: str = Field(
+        min_length=10,
+        max_length=100,
+    )
+
+    human_answer: str = Field(
+        min_length=1,
+        max_length=100,
+    )
+
+
+class OrganizationDomainRequestResponse(BaseModel):
+    status: str
+    message: str
+
+
+class OrganizationDomainRequestListItem(BaseModel):
+    id: int
+    domain: str
+    requester_email: EmailStr
+    requester_name: str
+    status: str
+    created_at: datetime
+
+
+class OrganizationDomainRequestReviewRequest(BaseModel):
+    decision: Literal[
+        "approved",
+        "rejected",
+    ]
+
+    review_notes: str | None = Field(
+        default=None,
+        max_length=2000,
+    )
+
+
+class OrganizationDomainRequestReviewResponse(BaseModel):
+    id: int
+    status: Literal[
+        "approved",
+        "rejected",
+    ]
+    message: str
+
+
+# ---------------------------------------------------------
 # ORGANIZATION ACCESS REQUEST
 # ---------------------------------------------------------
 
@@ -201,6 +270,31 @@ class OrganizationAccessRequestReviewResponse(BaseModel):
         "rejected",
     ]
     message: str
+
+
+class OrganizationAccessApprovedInvitationListItem(
+    BaseModel
+):
+    id: int
+    email: EmailStr
+    full_name: str
+
+    approved_role: (
+        OrganizationAccessAssignableRole
+    )
+
+    reviewed_at: datetime | None = None
+
+    invitation_status: Literal[
+        "pending_acceptance",
+        "expired",
+        "account_activated",
+        "delivery_unavailable",
+    ]
+
+    invitation_expires_at: (
+        datetime | None
+    ) = None
 
 
 # ---------------------------------------------------------

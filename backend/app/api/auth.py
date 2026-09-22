@@ -72,6 +72,14 @@ from app.models.organization import (
     Organization,
 )
 
+from app.models.organization_domain import (
+    OrganizationDomain,
+)
+
+from app.models.organization_domain_request import (
+    OrganizationDomainRequest,
+)
+
 from app.models.organization_access_request import (
     OrganizationAccessRequest,
 )
@@ -82,6 +90,8 @@ from app.schemas.auth import (
     ForgotPasswordRequest,
     ForgotPasswordResponse,
     HumanChallengeResponse,
+    OrganizationDomainRequestCreate,
+    OrganizationDomainRequestResponse,
     OrganizationAccessRequestCreate,
     OrganizationAccessRequestResponse,
     OrganizationAccessOnboardingRequest,
@@ -755,6 +765,16 @@ def find_existing_organization_by_domain(
     db: Session,
     domain: str,
 ) -> Organization | None:
+    verified_domain = db.scalar(
+        select(OrganizationDomain).where(
+            OrganizationDomain.domain == domain,
+            OrganizationDomain.status == "verified",
+        )
+    )
+
+    if verified_domain is not None:
+        return verified_domain.organization
+
     organizations = db.scalars(
         select(Organization)
     ).all()
@@ -1060,6 +1080,175 @@ def check_registration_organization(
     return RegistrationOrganizationCheckResponse(
         available=True,
         reason="available",
+    )
+
+
+# =========================================================
+# ORGANIZATION DOMAIN REQUEST
+# =========================================================
+
+
+@router.post(
+    "/request-domain-association",
+    response_model=
+        OrganizationDomainRequestResponse,
+    status_code=
+        status.HTTP_201_CREATED,
+)
+def request_organization_domain_association(
+    payload: OrganizationDomainRequestCreate,
+    db: Session = Depends(get_db),
+) -> OrganizationDomainRequestResponse:
+    normalized_email = normalize_email(
+        str(payload.email)
+    )
+
+    domain = validate_business_email(
+        normalized_email
+    )
+
+    # -----------------------------------------------------
+    # 1. Prevent requests for existing user accounts
+    # -----------------------------------------------------
+
+    existing_user = db.scalar(
+        select(User).where(
+            User.email ==
+            normalized_email
+        )
+    )
+
+    if existing_user is not None:
+        raise HTTPException(
+            status_code=
+                status.HTTP_409_CONFLICT,
+            detail=(
+                "An account already exists "
+                "for this email address."
+            ),
+        )
+
+    # -----------------------------------------------------
+    # 2. Resolve the claimed existing organisation by name
+    # -----------------------------------------------------
+
+    organization = (
+        find_existing_organization_by_name(
+            db=db,
+            organisation_name=
+                payload.organisation_name,
+        )
+    )
+
+    if organization is None:
+        raise HTTPException(
+            status_code=
+                status.HTTP_404_NOT_FOUND,
+            detail=(
+                "The specified organisation "
+                "could not be found."
+            ),
+        )
+
+    # -----------------------------------------------------
+    # 3. Prevent a domain already associated elsewhere
+    # -----------------------------------------------------
+
+    existing_domain = db.scalar(
+        select(
+            OrganizationDomain
+        ).where(
+            OrganizationDomain.domain
+            == domain
+        )
+    )
+
+    if existing_domain is not None:
+        raise HTTPException(
+            status_code=
+                status.HTTP_409_CONFLICT,
+            detail=(
+                "This work email domain is "
+                "already associated with an "
+                "organisation."
+            ),
+        )
+
+    # -----------------------------------------------------
+    # 4. Prevent duplicate pending domain requests
+    # -----------------------------------------------------
+
+    existing_request = db.scalar(
+        select(
+            OrganizationDomainRequest
+        ).where(
+            OrganizationDomainRequest.organization_id
+            == organization.id,
+            OrganizationDomainRequest.domain
+            == domain,
+            OrganizationDomainRequest.status
+            == "pending",
+        )
+    )
+
+    if existing_request is not None:
+        raise HTTPException(
+            status_code=
+                status.HTTP_409_CONFLICT,
+            detail=(
+                "A request to associate this "
+                "domain with the organisation "
+                "is already pending."
+            ),
+        )
+
+    # -----------------------------------------------------
+    # 5. Human verification
+    # -----------------------------------------------------
+
+    verify_and_consume_challenge(
+        db=db,
+        challenge_id=
+            payload.challenge_id,
+        answer=
+            payload.human_answer,
+    )
+
+    # -----------------------------------------------------
+    # 6. Create pending domain association request
+    # -----------------------------------------------------
+
+    full_name = (
+        f"{payload.first_name.strip()} "
+        f"{payload.last_name.strip()}"
+    ).strip()
+
+    domain_request = OrganizationDomainRequest(
+        organization_id=
+            organization.id,
+        domain=
+            domain,
+        requester_email=
+            normalized_email,
+        requester_name=
+            full_name,
+        status=
+            "pending",
+    )
+
+    db.add(
+        domain_request
+    )
+
+    db.commit()
+
+    return OrganizationDomainRequestResponse(
+        status="pending",
+        message=(
+            "Your organisation domain "
+            "association request has been "
+            "submitted for review."
+        ),
     )
 
 

@@ -1,5 +1,13 @@
 from app.models.organization import Organization
 
+from app.models.organization_domain import (
+    OrganizationDomain,
+)
+
+from app.models.organization_domain_request import (
+    OrganizationDomainRequest,
+)
+
 from app.models.organization_access_request import (
     OrganizationAccessRequest,
 )
@@ -50,6 +58,8 @@ from app.models.password_reset_token import (
 
 __all__ = [
     "Organization",
+    "OrganizationDomain",
+    "OrganizationDomainRequest",
     "OrganizationAccessRequest",
     "OrganizationAccessInvitationToken",
     "AISystem",

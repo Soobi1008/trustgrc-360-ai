@@ -9,6 +9,9 @@ from app.api.admin_users import router as admin_users_router
 from app.api.organization_access_requests import (
     router as organization_access_requests_router,
 )
+from app.api.organization_domain_requests import (
+    router as organization_domain_requests_router,
+)
 from app.api.risks import router as risks_router
 from app.api.assessments import router as assessments_router
 
@@ -60,6 +63,9 @@ app.include_router(auth_router)
 app.include_router(admin_users_router)
 app.include_router(
     organization_access_requests_router
+)
+app.include_router(
+    organization_domain_requests_router
 )
 app.include_router(risks_router)
 app.include_router(assessments_router)

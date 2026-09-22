@@ -1237,6 +1237,200 @@ export default function RegisterPage() {
 
 
   // =========================================================
+  // EXISTING ORGANISATION - NEW DOMAIN ASSOCIATION REQUEST
+  // =========================================================
+
+  async function handleDomainAssociationRequest() {
+    setErrorMessage("");
+    setAccessRequestMessage("");
+
+    if (
+      !organisationName.trim() ||
+      !firstName.trim() ||
+      !lastName.trim() ||
+      !email.trim()
+    ) {
+      setErrorMessage(
+        "Please complete the organisation name, first name, last name, and work email."
+      );
+      return;
+    }
+
+    if (
+      registrationPath !==
+      "existing_organization_new_domain"
+    ) {
+      setErrorMessage(
+        "We could not confirm that this organisation requires a new domain association."
+      );
+      return;
+    }
+
+    if (!challenge) {
+      setErrorMessage(
+        "Human verification is not available. Please request a new challenge."
+      );
+      return;
+    }
+
+    if (!humanAnswer.trim()) {
+      setErrorMessage(
+        "Please complete the human verification challenge."
+      );
+      return;
+    }
+
+    if (!API_URL) {
+      setErrorMessage(
+        "NEXT_PUBLIC_API_URL is not configured."
+      );
+
+      await resetAfterFailure();
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+
+      const normalizedEmail =
+        email
+          .trim()
+          .toLowerCase();
+
+      const response =
+        await fetch(
+          `${API_URL}/api/v1/auth/request-domain-association`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+              Accept:
+                "application/json",
+            },
+            body: JSON.stringify({
+              organisation_name:
+                organisationName.trim(),
+
+              first_name:
+                firstName.trim(),
+
+              last_name:
+                lastName.trim(),
+
+              email:
+                normalizedEmail,
+
+              challenge_id:
+                challenge.challenge_id,
+
+              human_answer:
+                humanAnswer.trim(),
+            }),
+          }
+        );
+
+      let data: {
+        status?: string;
+        message?: string;
+        detail?: string;
+      } = {};
+
+      try {
+        data =
+          (await response.json()) as {
+            status?: string;
+            message?: string;
+            detail?: string;
+          };
+      } catch {
+        data = {};
+      }
+
+      if (!response.ok) {
+        const detail =
+          data.detail ||
+          "Unable to submit the domain association request.";
+
+        const normalizedDetail =
+          detail.toLowerCase();
+
+        if (
+          normalizedDetail.includes(
+            "already pending"
+          )
+        ) {
+          throw new Error(
+            "A domain association request is already pending for this organisation."
+          );
+        }
+
+        if (
+          normalizedDetail.includes(
+            "account already exists"
+          )
+        ) {
+          throw new Error(
+            "An account already exists for this email address. Please sign in instead."
+          );
+        }
+
+        if (
+          normalizedDetail.includes(
+            "already associated"
+          )
+        ) {
+          throw new Error(
+            "This work email domain is already associated with an organisation."
+          );
+        }
+
+        throw new Error(
+          detail
+        );
+      }
+
+      setAccessRequestMessage(
+        data.message ||
+          "Your domain association request has been submitted for review."
+      );
+
+      setAccessRequestComplete(
+        true
+      );
+
+      setHumanAnswer("");
+      setChallenge(null);
+
+    } catch (error) {
+      let message =
+        "Unable to submit the domain association request.";
+
+      if (
+        error instanceof TypeError
+      ) {
+        message =
+          "The TrustGRC domain association request service is temporarily unavailable. Please try again.";
+      } else if (
+        error instanceof Error
+      ) {
+        message =
+          error.message;
+      }
+
+      setErrorMessage(
+        message
+      );
+
+      await resetAfterFailure();
+
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+
+  // =========================================================
   // RESEND VERIFICATION
   // =========================================================
 
@@ -1397,22 +1591,39 @@ export default function RegisterPage() {
         >
           <SecurityPoint
             text="Business email validation"
+            completed={
+              emailStatus.valid &&
+              (registrationEmailCheck === "available" ||
+                registrationEmailCheck ===
+                  "organization_exists")
+            }
           />
 
           <SecurityPoint
             text="Human verification"
+            completed={
+              registrationComplete ||
+              accessRequestComplete
+            }
           />
 
           <SecurityPoint
             text="Email ownership verification"
+            completed={registrationComplete}
           />
 
           <SecurityPoint
             text="Organisation-domain verification"
+            completed={
+              registrationEmailCheck ===
+                "organization_exists" ||
+              registrationOrganizationCheck ===
+                "available"
+            }
           />
 
           <SecurityPoint
-            text="MFA-ready authentication"
+            text="Optional: Set up MFA"
           />
         </div>
       </section>
@@ -1915,7 +2126,8 @@ export default function RegisterPage() {
             </label>
 
             {registrationPath ===
-              "existing_organization_new_domain" && (
+              "existing_organization_new_domain" && 
+              !accessRequestComplete && (
               <div
                 style={{
                   marginTop:
@@ -1950,8 +2162,10 @@ export default function RegisterPage() {
             )}
 
 
-            {registrationPath ===
-              "existing_organization" && (
+            {(registrationPath ===
+              "existing_organization" ||
+              registrationPath ===
+                "existing_organization_new_domain") && (
               <div
                 style={{
                   marginTop: "18px",
@@ -1976,7 +2190,10 @@ export default function RegisterPage() {
                         marginBottom: "8px",
                       }}
                     >
-                      Access request submitted
+                      {registrationPath ===
+                      "existing_organization_new_domain"
+                        ? "Domain verification request submitted"
+                        : "Access request submitted"}
                     </div>
 
                     <p
@@ -2000,10 +2217,10 @@ export default function RegisterPage() {
                         lineHeight: 1.6,
                       }}
                     >
-                      Your organisation administrator
-                      must review and approve your
-                      request before you can activate
-                      your account.
+                      {registrationPath ===
+                      "existing_organization_new_domain"
+                        ? "Your organisation administrator must review and approve the domain association before you can proceed with an organisation access request."
+                        : "Your organisation administrator must review and approve your request before you can activate your account."}
                     </p>
                   </div>
                 ) : (
@@ -2029,13 +2246,10 @@ export default function RegisterPage() {
                       <strong>
                         Existing organisation detected.
                       </strong>{" "}
-                      Your work email domain is
-                      associated with an organisation
-                      that is already registered with
-                      TrustGRC AI 360. Complete the
-                      human verification below and
-                      submit an access request to your
-                      organisation administrator.
+                      {registrationPath ===
+                      "existing_organization_new_domain"
+                        ? "The organisation is already registered with TrustGRC AI 360, but your work email domain is not yet recognised for it. Complete the human verification below and submit a domain verification request to the organisation administrator."
+                        : "Your work email domain is associated with an organisation that is already registered with TrustGRC AI 360. Complete the human verification below and submit an access request to your organisation administrator."}
                     </div>
 
                     <div
@@ -2087,11 +2301,19 @@ export default function RegisterPage() {
                               color:
                                 "#334155",
                               fontSize:
-                                "13px",
+                                challenge?.challenge_type ===
+                                "shape_pattern"
+                                  ? "18px"
+                                  : "13px",
                               lineHeight:
                                 1.6,
                               fontWeight:
                                 600,
+                              fontFamily:
+                                challenge?.challenge_type ===
+                                "shape_pattern"
+                                  ? '"Segoe UI Symbol", "Noto Sans Symbols", sans-serif'
+                                  : "inherit",
                             }}
                           >
                             {challengeLoading
@@ -2305,7 +2527,12 @@ export default function RegisterPage() {
                     <button
                       type="button"
                       onClick={() =>
-                        void handleRequestAccess()
+                        void (
+                          registrationPath ===
+                          "existing_organization_new_domain"
+                            ? handleDomainAssociationRequest()
+                            : handleRequestAccess()
+                        )
                       }
                       disabled={
                         isSubmitting ||
@@ -2345,8 +2572,14 @@ export default function RegisterPage() {
                       }}
                     >
                       {isSubmitting
-                        ? "Submitting access request..."
-                        : "Request access"}
+                        ? registrationPath ===
+                          "existing_organization_new_domain"
+                          ? "Submitting domain verification request..."
+                          : "Submitting access request..."
+                        : registrationPath ===
+                            "existing_organization_new_domain"
+                          ? "Request domain verification"
+                          : "Request access"}
                     </button>
 
                     <p
@@ -2741,11 +2974,19 @@ export default function RegisterPage() {
                       color:
                         "#334155",
                       fontSize:
-                        "13px",
+                        challenge?.challenge_type ===
+                        "shape_pattern"
+                          ? "18px"
+                          : "13px",
                       lineHeight:
                         1.6,
                       fontWeight:
                         600,
+                      fontFamily:
+                        challenge?.challenge_type ===
+                        "shape_pattern"
+                          ? '"Segoe UI Symbol", "Noto Sans Symbols", sans-serif'
+                          : "inherit",
                     }}
                   >
                     {challengeLoading
@@ -3188,50 +3429,44 @@ function formatChallengeType(
 
 function SecurityPoint({
   text,
+  completed = false,
 }: {
   text: string;
+  completed?: boolean;
 }) {
   return (
     <div
       style={{
-        display:
-          "flex",
-        gap:
-          "10px",
-        alignItems:
-          "center",
-        color:
-          "#dbeafe",
-        fontSize:
-          "14px",
+        display: "flex",
+        gap: "10px",
+        alignItems: "center",
+        color: "#dbeafe",
+        fontSize: "14px",
       }}
     >
       <span
         style={{
-          width:
-            "24px",
-          height:
-            "24px",
-          borderRadius:
-            "50%",
-          display:
-            "grid",
-          placeItems:
-            "center",
-          backgroundColor:
-            "rgba(255,255,255,0.12)",
-          fontWeight:
-            800,
+          width: "24px",
+          height: "24px",
+          borderRadius: "50%",
+          display: "grid",
+          placeItems: "center",
+          backgroundColor: completed
+            ? "rgba(255,255,255,0.18)"
+            : "rgba(255,255,255,0.08)",
+          border: completed
+            ? "none"
+            : "1px solid rgba(255,255,255,0.28)",
+          fontWeight: 800,
         }}
       >
-        ✓
+        {completed ? "✓" : "•"}
       </span>
 
       {text}
     </div>
   );
 }
-
 
 function MessageBox({
   message,
