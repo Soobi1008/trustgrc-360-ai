@@ -15,6 +15,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.core.email_service import (
+    EmailDeliveryError,
+    send_domain_association_decision_email,
+)
 from app.dependencies.auth import require_roles
 
 from app.models.organization_domain import (
@@ -227,6 +231,24 @@ def review_organization_domain_request(
         domain_request
     )
 
+    notification_delivered = True
+
+    try:
+        send_domain_association_decision_email(
+            recipient_email=
+                domain_request.requester_email,
+            recipient_name=
+                domain_request.requester_name,
+            organization_name=
+                domain_request.organization.name,
+            domain=
+                domain_request.domain,
+            decision=
+                domain_request.status,
+        )
+    except EmailDeliveryError:
+        notification_delivered = False
+
     if payload.decision == "approved":
         message = (
             "The domain association request "
@@ -236,6 +258,12 @@ def review_organization_domain_request(
         message = (
             "The domain association request "
             "has been rejected."
+        )
+
+    if not notification_delivered:
+        message += (
+            " The requester notification email "
+            "could not be delivered."
         )
 
     return OrganizationDomainRequestReviewResponse(

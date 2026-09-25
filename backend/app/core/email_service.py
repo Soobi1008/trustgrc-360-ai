@@ -1,5 +1,6 @@
 from email.message import EmailMessage
 from email.utils import formataddr
+from html import escape
 import smtplib
 import ssl
 
@@ -942,3 +943,287 @@ def send_access_invitation_email(
     )
 
     return invitation_url
+
+
+def build_domain_association_decision_email(
+    recipient_email: str,
+    recipient_name: str,
+    organization_name: str,
+    domain: str,
+    decision: str,
+) -> EmailMessage:
+    message = EmailMessage()
+
+    approved = decision == "approved"
+
+    if approved:
+        subject = (
+            "Your TrustGRC AI 360 domain request "
+            "has been approved"
+        )
+        heading = "Domain association approved"
+        decision_text = (
+            f"The domain {domain} has been approved "
+            f"for {organization_name} in "
+            "TrustGRC AI 360."
+        )
+        next_step = (
+            "You can now return to TrustGRC AI 360 "
+            "and request access to your organisation "
+            "using your work email address."
+        )
+    else:
+        subject = (
+            "Update on your TrustGRC AI 360 "
+            "domain request"
+        )
+        heading = "Domain association request update"
+        decision_text = (
+            "The request to associate the domain "
+            f"{domain} with {organization_name} "
+            "was not approved."
+        )
+        next_step = (
+            "If you believe this decision was made "
+            "in error, please contact your "
+            "organisation administrator."
+        )
+
+    message["Subject"] = subject
+    message["To"] = recipient_email
+
+    from_email = (
+        settings.SMTP_FROM_EMAIL
+        or settings.SMTP_USERNAME
+    )
+
+    if not from_email:
+        raise EmailDeliveryError(
+            "SMTP_FROM_EMAIL or SMTP_USERNAME "
+            "must be configured."
+        )
+
+    message["From"] = formataddr(
+        (
+            settings.SMTP_FROM_NAME,
+            from_email,
+        )
+    )
+
+    safe_name = (
+        recipient_name.strip()
+        or "there"
+    )
+
+    plain_text = f"""
+Hello {safe_name},
+
+{decision_text}
+
+{next_step}
+
+TrustGRC AI 360
+Governance, Risk & Compliance for Trustworthy AI
+""".strip()
+
+    safe_name_html = escape(
+        safe_name
+    )
+
+    safe_organization_name_html = escape(
+        organization_name
+    )
+
+    safe_domain_html = escape(
+        domain
+    )
+
+    if approved:
+        decision_html = (
+            f"The domain {safe_domain_html} has been "
+            f"approved for "
+            f"{safe_organization_name_html} in "
+            "TrustGRC AI 360."
+        )
+    else:
+        decision_html = (
+            "The request to associate the domain "
+            f"{safe_domain_html} with "
+            f"{safe_organization_name_html} "
+            "was not approved."
+        )
+
+    html = f"""
+<!doctype html>
+<html>
+  <body
+    style="
+      margin:0;
+      padding:0;
+      background:#f8fafc;
+      font-family:Arial,Helvetica,sans-serif;
+      color:#0f172a;
+    "
+  >
+    <table
+      width="100%"
+      cellpadding="0"
+      cellspacing="0"
+      role="presentation"
+      style="
+        width:100%;
+        background:#f8fafc;
+        padding:32px 16px;
+      "
+    >
+      <tr>
+        <td align="center">
+          <table
+            width="100%"
+            cellpadding="0"
+            cellspacing="0"
+            role="presentation"
+            style="
+              max-width:620px;
+              background:#ffffff;
+              border:1px solid #e2e8f0;
+              border-radius:16px;
+              overflow:hidden;
+            "
+          >
+            <tr>
+              <td
+                style="
+                  padding:28px 32px;
+                  background:
+                    linear-gradient(
+                      135deg,
+                      #0f172a,
+                      #1d4ed8
+                    );
+                  color:#ffffff;
+                "
+              >
+                <div
+                  style="
+                    font-size:13px;
+                    font-weight:800;
+                    letter-spacing:0.08em;
+                  "
+                >
+                  TRUSTGRC AI 360
+                </div>
+
+                <div
+                  style="
+                    margin-top:10px;
+                    font-size:24px;
+                    font-weight:800;
+                    line-height:1.3;
+                  "
+                >
+                  {heading}
+                </div>
+              </td>
+            </tr>
+
+            <tr>
+              <td
+                style="
+                  padding:32px;
+                "
+              >
+                <p
+                  style="
+                    margin:0 0 18px;
+                    font-size:16px;
+                    line-height:1.7;
+                  "
+                >
+                  Hello {safe_name_html},
+                </p>
+
+                <p
+                  style="
+                    margin:0 0 18px;
+                    color:#475569;
+                    font-size:15px;
+                    line-height:1.7;
+                  "
+                >
+                  {decision_html}
+                </p>
+
+                <p
+                  style="
+                    margin:0;
+                    color:#475569;
+                    font-size:15px;
+                    line-height:1.7;
+                  "
+                >
+                  {next_step}
+                </p>
+              </td>
+            </tr>
+
+            <tr>
+              <td
+                style="
+                  padding:20px 32px;
+                  border-top:1px solid #e2e8f0;
+                  color:#94a3b8;
+                  font-size:11px;
+                  line-height:1.6;
+                "
+              >
+                TrustGRC AI 360<br>
+                Governance, Risk & Compliance for
+                Trustworthy AI
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
+""".strip()
+
+    message.set_content(
+        plain_text
+    )
+
+    message.add_alternative(
+        html,
+        subtype="html",
+    )
+
+    return message
+
+
+def send_domain_association_decision_email(
+    recipient_email: str,
+    recipient_name: str,
+    organization_name: str,
+    domain: str,
+    decision: str,
+) -> None:
+    message = (
+        build_domain_association_decision_email(
+            recipient_email=
+                recipient_email,
+            recipient_name=
+                recipient_name,
+            organization_name=
+                organization_name,
+            domain=
+                domain,
+            decision=
+                decision,
+        )
+    )
+
+    send_email_message(
+        message
+    )
